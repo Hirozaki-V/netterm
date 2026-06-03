@@ -1,0 +1,1631 @@
+// State Management
+let state = {
+  terms: {},
+  geminiApiKey: "",
+  activeTab: "dashboard",
+  selectedTermKey: null,
+  filters: {
+    search: "",
+    category: "all"
+  },
+  quiz: {
+    questions: [],
+    currentIndex: 0,
+    score: 0,
+    userAnswered: false,
+    selectedOptionIdx: null
+  },
+  flashcards: {
+    cards: [],
+    currentIndex: 0,
+    isFlipped: false
+  },
+  mindmap: {
+    draggedNodeId: null,
+    dragOffset: { x: 0, y: 0 },
+    activeConnSource: null,
+    panOffset: { x: 0, y: 0 },
+    isPanning: false,
+    panStart: { x: 0, y: 0 }
+  }
+};
+
+// Toast timeout reference for cancellation
+let toastTimeoutId = null;
+
+// Utility: Escape HTML to prevent XSS
+function escapeHTML(str) {
+  if (typeof str !== 'string') return '';
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
+// Utility: Debounce function to limit rapid calls
+function debounce(fn, delay) {
+  let timerId;
+  return function(...args) {
+    clearTimeout(timerId);
+    timerId = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+// Initial Sample Terms (loaded if LocalStorage is empty)
+const SAMPLE_TERMS_KEYS = ["fotossintese", "celula", "dna", "democracia", "algoritmo", "metafora", "inteligencia artificial", "energia"];
+
+// DOM Elements
+const elements = {
+  // Navigation
+  navItems: document.querySelectorAll(".nav-item"),
+  tabContents: document.querySelectorAll(".tab-content"),
+  apiStatusDot: document.getElementById("api-status-dot"),
+  apiStatusText: document.getElementById("api-status-text"),
+  openSettingsBtn: document.getElementById("open-settings-btn"),
+  
+  // Dashboard
+  dumpTextarea: document.getElementById("dump-textarea"),
+  addTermBtn: document.getElementById("add-term-btn"),
+  categoryFilterTabs: document.getElementById("category-filter-tabs"),
+  searchInput: document.getElementById("search-input"),
+  termsGrid: document.getElementById("terms-grid"),
+  
+  // Detail Panel
+  detailPanel: document.getElementById("detail-panel"),
+  detailTitle: document.getElementById("detail-title"),
+  detailCategory: document.getElementById("detail-category"),
+  detailDefinition: document.getElementById("detail-definition"),
+  detailNotesInput: document.getElementById("detail-notes-input"),
+  detailConnectionsList: document.getElementById("detail-connections-list"),
+  closeDetailBtn: document.getElementById("close-detail-btn"),
+  editDefinitionBtn: document.getElementById("edit-definition-btn"),
+  regenerateAiBtn: document.getElementById("regenerate-ai-btn"),
+  deleteTermBtn: document.getElementById("delete-term-btn"),
+  saveNotesBtn: document.getElementById("save-notes-btn"),
+  
+  // Flashcards
+  flashcardStage: document.getElementById("flashcard-stage"),
+  flashcardElement: document.getElementById("flashcard-element"),
+  fcFrontCategory: document.getElementById("flashcard-front-category"),
+  fcFrontTerm: document.getElementById("flashcard-front-term"),
+  fcBackCategory: document.getElementById("flashcard-back-category"),
+  fcBackDefinition: document.getElementById("flashcard-back-definition"),
+  fcCounter: document.getElementById("fc-counter"),
+  fcPrevBtn: document.getElementById("fc-prev-btn"),
+  fcNextBtn: document.getElementById("fc-next-btn"),
+  fcBtnWrong: document.getElementById("fc-btn-wrong"),
+  fcBtnCorrect: document.getElementById("fc-btn-correct"),
+  
+  // Quiz
+  quizCard: document.getElementById("quiz-card"),
+  quizProgress: document.getElementById("quiz-progress"),
+  quizScore: document.getElementById("quiz-score"),
+  quizQuestionText: document.getElementById("quiz-question-text"),
+  quizOptionsContainer: document.getElementById("quiz-options-container"),
+  quizNextBtn: document.getElementById("quiz-next-btn"),
+  
+  // Mind Map
+  mindmapSvg: document.getElementById("mindmap-svg"),
+  linksGroup: document.getElementById("links-group"),
+  nodesGroup: document.getElementById("nodes-group"),
+  mmResetBtn: document.getElementById("mm-reset-btn"),
+  mmClearLinksBtn: document.getElementById("mm-clear-links-btn"),
+  
+  // Modals
+  settingsModal: document.getElementById("settings-modal"),
+  closeSettingsBtn: document.getElementById("close-settings-btn"),
+  cancelSettingsBtn: document.getElementById("cancel-settings-btn"),
+  saveSettingsBtn: document.getElementById("save-settings-btn"),
+  settingsGeminiKey: document.getElementById("settings-gemini-key"),
+  exportDbBtn: document.getElementById("export-db-btn"),
+  importDbBtn: document.getElementById("import-db-btn"),
+  importDbInput: document.getElementById("import-db-input"),
+  clearDbBtn: document.getElementById("clear-db-btn"),
+  
+  editDefModal: document.getElementById("edit-def-modal"),
+  closeEditDefBtn: document.getElementById("close-edit-def-btn"),
+  cancelEditDefBtn: document.getElementById("cancel-edit-def-btn"),
+  saveEditDefBtn: document.getElementById("save-edit-def-btn"),
+  editDefTermInput: document.getElementById("edit-def-term"),
+  editDefCategorySelect: document.getElementById("edit-def-category"),
+  editDefTextarea: document.getElementById("edit-def-textarea"),
+  
+  addConnModal: document.getElementById("add-conn-modal"),
+  closeConnBtn: document.getElementById("close-conn-btn"),
+  cancelConnBtn: document.getElementById("cancel-conn-btn"),
+  saveConnBtn: document.getElementById("save-conn-btn"),
+  connSelect: document.getElementById("conn-select")
+};
+
+// Initialize App
+window.addEventListener("DOMContentLoaded", () => {
+  loadData();
+  setupEventListeners();
+  updateApiStatusUI();
+  renderTermsGrid();
+});
+
+// Load state from LocalStorage
+function loadData() {
+  // Load Gemini API Key
+  const savedKey = localStorage.getItem("studyflow_api_key");
+  state.geminiApiKey = (savedKey !== null && savedKey !== "") ? savedKey : "";
+  elements.settingsGeminiKey.value = state.geminiApiKey;
+  
+  // Load Terms
+  const savedTerms = localStorage.getItem("studyflow_terms");
+  if (savedTerms) {
+    try {
+      state.terms = JSON.parse(savedTerms);
+    } catch (e) {
+      console.error("Error parsing local storage terms", e);
+      state.terms = {};
+    }
+  } else {
+    // Populate with initial sample terms from BUILTIN_DICTIONARY
+    state.terms = {};
+    SAMPLE_TERMS_KEYS.forEach(key => {
+      if (BUILTIN_DICTIONARY[key]) {
+        state.terms[key] = {
+          term: BUILTIN_DICTIONARY[key].term,
+          definition: BUILTIN_DICTIONARY[key].definition,
+          category: BUILTIN_DICTIONARY[key].category,
+          connections: [...BUILTIN_DICTIONARY[key].connections],
+          notes: "",
+          x: Math.random() * 400 + 100, // Random positions for mindmap
+          y: Math.random() * 250 + 80,
+          createdAt: Date.now()
+        };
+      }
+    });
+    saveData();
+  }
+}
+
+// Save state to LocalStorage
+function saveData() {
+  localStorage.setItem("studyflow_terms", JSON.stringify(state.terms));
+  localStorage.setItem("studyflow_api_key", state.geminiApiKey);
+}
+
+// Update the Gemini API status bar
+function updateApiStatusUI() {
+  if (state.geminiApiKey.trim() !== "") {
+    elements.apiStatusDot.className = "status-dot active";
+    elements.apiStatusText.innerText = "API Gemini Ativa (Nuvem)";
+    elements.apiStatusDot.style.boxShadow = "0 0 8px var(--accent-cyan)";
+  } else {
+    elements.apiStatusDot.className = "status-dot local";
+    elements.apiStatusText.innerText = "Modo Local (Dicionário Técnico)";
+    elements.apiStatusDot.style.boxShadow = "0 0 8px var(--accent-green)";
+  }
+}
+
+// Set up UI Event Handlers
+function setupEventListeners() {
+  // Tab Navigation
+  elements.navItems.forEach(item => {
+    item.addEventListener("click", () => {
+      const tabId = item.getAttribute("data-tab");
+      switchTab(tabId);
+    });
+    // Keyboard accessibility: Enter and Space activate tabs
+    item.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        const tabId = item.getAttribute("data-tab");
+        switchTab(tabId);
+      }
+    });
+  });
+
+  // Settings Modal toggles
+  elements.openSettingsBtn.addEventListener("click", () => {
+    elements.settingsGeminiKey.value = state.geminiApiKey;
+    elements.settingsModal.classList.add("open");
+  });
+  elements.closeSettingsBtn.addEventListener("click", () => elements.settingsModal.classList.remove("open"));
+  elements.cancelSettingsBtn.addEventListener("click", () => elements.settingsModal.classList.remove("open"));
+  
+  elements.saveSettingsBtn.addEventListener("click", () => {
+    state.geminiApiKey = elements.settingsGeminiKey.value.trim();
+    saveData();
+    updateApiStatusUI();
+    elements.settingsModal.classList.remove("open");
+    // Show notification alert
+    showToast("Configurações salvas com sucesso!");
+  });
+
+  // Export DB
+  elements.exportDbBtn.addEventListener("click", () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.terms, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `studyflow_backup_${new Date().toISOString().slice(0,10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  });
+
+  // Import DB
+  elements.importDbBtn.addEventListener("click", () => {
+    elements.importDbInput.click();
+  });
+  elements.importDbInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      try {
+        const importedData = JSON.parse(evt.target.result);
+        if (typeof importedData === 'object' && importedData !== null && !Array.isArray(importedData)) {
+          // Validate each entry has required fields before merging
+          const validatedData = {};
+          let skipped = 0;
+          Object.keys(importedData).forEach(key => {
+            const item = importedData[key];
+            if (item && typeof item === 'object' && typeof item.term === 'string' && typeof item.definition === 'string') {
+              validatedData[key] = {
+                term: item.term,
+                definition: item.definition,
+                category: typeof item.category === 'string' ? item.category : 'custom',
+                connections: Array.isArray(item.connections) ? item.connections.filter(c => typeof c === 'string') : [],
+                notes: typeof item.notes === 'string' ? item.notes : '',
+                x: typeof item.x === 'number' ? item.x : Math.random() * 400 + 100,
+                y: typeof item.y === 'number' ? item.y : Math.random() * 250 + 80,
+                createdAt: typeof item.createdAt === 'number' ? item.createdAt : Date.now()
+              };
+            } else {
+              skipped++;
+            }
+          });
+          state.terms = { ...state.terms, ...validatedData };
+          saveData();
+          renderTermsGrid();
+          const imported = Object.keys(validatedData).length;
+          showToast(`${imported} termo(s) importado(s)${skipped > 0 ? `, ${skipped} ignorado(s) (formato inválido)` : ''}!`);
+        } else {
+          showToast("Formato de arquivo inválido. Esperado um objeto JSON.", true);
+        }
+      } catch (err) {
+        showToast("Erro ao processar o arquivo JSON.", true);
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  // Clear DB
+  elements.clearDbBtn.addEventListener("click", () => {
+    if (confirm("ATENÇÃO: Isso apagará TODOS os seus termos cadastrados! Deseja continuar?")) {
+      state.terms = {};
+      saveData();
+      renderTermsGrid();
+      elements.settingsModal.classList.remove("open");
+      showToast("Banco de dados local limpo.");
+    }
+  });
+
+  // Add Term Event Handlers
+  elements.addTermBtn.addEventListener("click", processDumpInput);
+  elements.dumpTextarea.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      processDumpInput();
+    }
+  });
+
+  // Search input change (debounced for performance)
+  const debouncedSearch = debounce((value) => {
+    state.filters.search = value.toLowerCase().trim();
+    renderTermsGrid();
+  }, 200);
+  elements.searchInput.addEventListener("input", (e) => {
+    debouncedSearch(e.target.value);
+  });
+
+  // Filter category tabs
+  elements.categoryFilterTabs.addEventListener("click", (e) => {
+    const target = e.target.closest(".filter-tab");
+    if (!target) return;
+    
+    elements.categoryFilterTabs.querySelectorAll(".filter-tab").forEach(tab => tab.classList.remove("active"));
+    target.classList.add("active");
+    
+    state.filters.category = target.getAttribute("data-filter");
+    renderTermsGrid();
+  });
+
+  // Close Detail side drawer
+  elements.closeDetailBtn.addEventListener("click", () => {
+    elements.detailPanel.classList.remove("open");
+    state.selectedTermKey = null;
+  });
+
+  // Edit Definition Modal Toggles
+  elements.editDefinitionBtn.addEventListener("click", () => {
+    if (!state.selectedTermKey || !state.terms[state.selectedTermKey]) return;
+    const item = state.terms[state.selectedTermKey];
+    elements.editDefTermInput.value = item.term;
+    elements.editDefCategorySelect.value = item.category || "custom";
+    elements.editDefTextarea.value = item.definition;
+    elements.editDefModal.classList.add("open");
+  });
+  elements.closeEditDefBtn.addEventListener("click", () => elements.editDefModal.classList.remove("open"));
+  elements.cancelEditDefBtn.addEventListener("click", () => elements.editDefModal.classList.remove("open"));
+  elements.saveEditDefBtn.addEventListener("click", () => {
+    const key = state.selectedTermKey;
+    if (!key || !state.terms[key]) return;
+    
+    state.terms[key].category = elements.editDefCategorySelect.value;
+    state.terms[key].definition = elements.editDefTextarea.value.trim();
+    
+    saveData();
+    elements.editDefModal.classList.remove("open");
+    openDetailPanel(key); // Refresh detail panel
+    renderTermsGrid();    // Refresh grid
+  });
+  
+  // Regenerate term using Gemini API
+  elements.regenerateAiBtn.addEventListener("click", regenerateTermWithAi);
+
+  // Save Notes and Details changes
+  elements.saveNotesBtn.addEventListener("click", () => {
+    const key = state.selectedTermKey;
+    if (!key || !state.terms[key]) return;
+    
+    state.terms[key].notes = elements.detailNotesInput.value;
+    saveData();
+    renderTermsGrid();
+    showToast("Notas da aula salvas!");
+  });
+
+  // Delete Term
+  elements.deleteTermBtn.addEventListener("click", () => {
+    const key = state.selectedTermKey;
+    if (!key) return;
+    
+    if (confirm(`Tem certeza que deseja remover o termo "${state.terms[key].term}"?`)) {
+      // Remove from connections references in other terms
+      Object.keys(state.terms).forEach(otherKey => {
+        if (Array.isArray(state.terms[otherKey].connections)) {
+          state.terms[otherKey].connections = state.terms[otherKey].connections.filter(c => c !== key);
+        }
+      });
+      
+      delete state.terms[key];
+      saveData();
+      elements.detailPanel.classList.remove("open");
+      state.selectedTermKey = null;
+      renderTermsGrid();
+      showToast("Termo removido.");
+    }
+  });
+
+  // Connect terms modal
+  elements.closeConnBtn.addEventListener("click", () => elements.addConnModal.classList.remove("open"));
+  elements.cancelConnBtn.addEventListener("click", () => elements.addConnModal.classList.remove("open"));
+  elements.saveConnBtn.addEventListener("click", () => {
+    const sourceKey = state.selectedTermKey;
+    const destKey = elements.connSelect.value;
+    if (!sourceKey || !destKey || sourceKey === destKey) return;
+    
+    // Bidirectional connection
+    if (!state.terms[sourceKey].connections.includes(destKey)) {
+      state.terms[sourceKey].connections.push(destKey);
+    }
+    if (!state.terms[destKey].connections.includes(sourceKey)) {
+      state.terms[destKey].connections.push(sourceKey);
+    }
+    
+    saveData();
+    elements.addConnModal.classList.remove("open");
+    openDetailPanel(sourceKey); // refresh
+    showToast("Conexão estabelecida!");
+  });
+
+  // Flashcards Flipping
+  elements.flashcardStage.addEventListener("click", () => {
+    elements.flashcardElement.classList.toggle("flipped");
+    state.flashcards.isFlipped = !state.flashcards.isFlipped;
+  });
+
+  // Flashcards Study Score Buttons
+  elements.fcBtnCorrect.addEventListener("click", (e) => {
+    e.stopPropagation(); // Stop flipping
+    showToast("Muito bem! Cartão memorizado.");
+    advanceFlashcard(1);
+  });
+  elements.fcBtnWrong.addEventListener("click", (e) => {
+    e.stopPropagation(); // Stop flipping
+    showToast("Vamos reforçar esse depois.");
+    advanceFlashcard(1);
+  });
+
+  // Flashcards Navigation
+  elements.fcPrevBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    advanceFlashcard(-1);
+  });
+  elements.fcNextBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    advanceFlashcard(1);
+  });
+
+  // Quiz Navigation
+  elements.quizNextBtn.addEventListener("click", () => {
+    elements.quizNextBtn.style.display = "none";
+    state.quiz.currentIndex++;
+    renderQuizQuestion();
+  });
+
+  // Mind map custom buttons
+  elements.mmResetBtn.addEventListener("click", () => {
+    arrangeMindmapNodesCircle();
+    renderMindmap();
+    showToast("Mapa mental reorganizado.");
+  });
+
+  elements.mmClearLinksBtn.addEventListener("click", () => {
+    if (confirm("Deseja apagar todas as conexões entre termos? Isso não apagará os termos em si.")) {
+      Object.keys(state.terms).forEach(k => {
+        state.terms[k].connections = [];
+      });
+      saveData();
+      renderMindmap();
+      showToast("Conexões limpas.");
+    }
+  });
+
+  // SVG Pan / Drag / Click connection logic
+  setupSvgHandlers();
+
+  // Mobile sidebar toggle
+  const mobileToggle = document.getElementById("mobile-menu-toggle");
+  const sidebar = document.querySelector(".app-sidebar-nav");
+  if (mobileToggle && sidebar) {
+    mobileToggle.addEventListener("click", () => {
+      sidebar.classList.toggle("open");
+      mobileToggle.classList.toggle("active");
+    });
+    // Close sidebar when a nav item is clicked on mobile
+    elements.navItems.forEach(item => {
+      item.addEventListener("click", () => {
+        if (window.innerWidth <= 1024) {
+          sidebar.classList.remove("open");
+          mobileToggle.classList.remove("active");
+        }
+      });
+    });
+  }
+}
+
+// Switch between App Tabs
+function switchTab(tabId) {
+  state.activeTab = tabId;
+  
+  // Update nav UI
+  elements.navItems.forEach(item => {
+    if (item.getAttribute("data-tab") === tabId) {
+      item.classList.add("active");
+    } else {
+      item.classList.remove("active");
+    }
+  });
+
+  // Update tabs views
+  elements.tabContents.forEach(content => {
+    if (content.id === `tab-${tabId}`) {
+      content.classList.add("active");
+    } else {
+      content.classList.remove("active");
+    }
+  });
+
+  // Specific tab initializations
+  if (tabId === "flashcards") {
+    initFlashcards();
+  } else if (tabId === "quiz") {
+    initQuiz();
+  } else if (tabId === "mindmap") {
+    initMindmap();
+  }
+}
+
+// Show toast notifications
+function showToast(message, isError = false) {
+  let toast = document.getElementById("studyflow-toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "studyflow-toast";
+    toast.style.position = "fixed";
+    toast.style.bottom = "2rem";
+    toast.style.right = "2rem";
+    toast.style.padding = "0.75rem 1.5rem";
+    toast.style.borderRadius = "8px";
+    toast.style.fontSize = "0.9rem";
+    toast.style.fontWeight = "600";
+    toast.style.color = "var(--bg-primary)";
+    toast.style.zIndex = "1000";
+    toast.style.boxShadow = "0 8px 24px rgba(0,0,0,0.3)";
+    toast.style.transition = "all 0.3s ease";
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(10px)";
+    document.body.appendChild(toast);
+  }
+  
+  toast.style.background = isError 
+    ? "linear-gradient(135deg, #ef4444 0%, #ec4899 100%)" 
+    : "linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%)";
+  toast.innerText = message;
+  toast.style.opacity = "1";
+  toast.style.transform = "translateY(0)";
+
+  // Cancel any previous timeout to prevent premature hiding
+  if (toastTimeoutId) clearTimeout(toastTimeoutId);
+  toastTimeoutId = setTimeout(() => {
+    toast.style.opacity = "0";
+    toast.style.transform = "translateY(10px)";
+    toastTimeoutId = null;
+  }, 3000);
+}
+
+// ----------------------------------------------------
+// DUMP & PROCESS CONTROLLERS
+// ----------------------------------------------------
+
+async function processDumpInput() {
+  const rawInput = elements.dumpTextarea.value.trim();
+  if (!rawInput) return;
+
+  // Clear input
+  elements.dumpTextarea.value = "";
+  
+  // Split terms by commas, semicolons or lines
+  const rawTerms = rawInput.split(/[,;\n]+/).map(t => t.trim()).filter(t => t.length > 0);
+  if (rawTerms.length === 0) return;
+
+  showToast(`Processando ${rawTerms.length} termo(s)...`);
+
+  for (let termText of rawTerms) {
+    const slug = termText.toLowerCase().replace(/[^a-z0-9à-ú\s/-]/gi, '').trim();
+    if (!slug) continue;
+    
+    // Check if it already exists
+    if (state.terms[slug]) {
+      continue;
+    }
+
+    // Set temp loading term state
+    state.terms[slug] = {
+      term: termText,
+      definition: "Processando informações...",
+      category: "custom",
+      connections: [],
+      notes: "",
+      x: Math.random() * 400 + 100,
+      y: Math.random() * 250 + 80,
+      createdAt: Date.now(),
+      loading: true
+    };
+    renderTermsGrid();
+
+    // Check BUILTIN Glossary first
+    const cleanLookup = slug.replace(/-/g, ' ');
+    let matchedKey = null;
+    
+    // Direct matches or key includes matches
+    if (BUILTIN_DICTIONARY[slug]) {
+      matchedKey = slug;
+    } else {
+      matchedKey = Object.keys(BUILTIN_DICTIONARY).find(key => 
+        key === cleanLookup || cleanLookup.includes(key) || key.includes(cleanLookup)
+      );
+    }
+
+    if (matchedKey) {
+      // Local Glossary Match
+      const glossaryItem = BUILTIN_DICTIONARY[matchedKey];
+      state.terms[slug] = {
+        term: glossaryItem.term,
+        definition: glossaryItem.definition,
+        category: glossaryItem.category,
+        connections: [...glossaryItem.connections],
+        notes: "",
+        x: Math.random() * 400 + 100,
+        y: Math.random() * 250 + 80,
+        createdAt: Date.now()
+      };
+      
+      // Let's resolve connections if their keys exist in state
+      state.terms[slug].connections = glossaryItem.connections.filter(c => state.terms[c] !== undefined);
+      // Link back as well
+      state.terms[slug].connections.forEach(connKey => {
+        if (state.terms[connKey] && !state.terms[connKey].connections.includes(slug)) {
+          state.terms[connKey].connections.push(slug);
+        }
+      });
+      
+      saveData();
+      renderTermsGrid();
+    } else if (state.geminiApiKey.trim() !== "") {
+      // API Gemini Call
+      try {
+        const aiResult = await fetchGeminiSummary(termText);
+        if (aiResult) {
+          state.terms[slug] = {
+            term: aiResult.term || termText,
+            definition: aiResult.definition || "Sem definição disponível.",
+            category: aiResult.category || "custom",
+            connections: [],
+            notes: "",
+            x: Math.random() * 400 + 100,
+            y: Math.random() * 250 + 80,
+            createdAt: Date.now()
+          };
+          
+          // Map related suggestions to existing terms if possible
+          if (Array.isArray(aiResult.connections)) {
+            aiResult.connections.forEach(connSlug => {
+              const cleanedConn = connSlug.toLowerCase().trim();
+              if (state.terms[cleanedConn]) {
+                if (!state.terms[slug].connections.includes(cleanedConn)) {
+                  state.terms[slug].connections.push(cleanedConn);
+                }
+                if (!state.terms[cleanedConn].connections.includes(slug)) {
+                  state.terms[cleanedConn].connections.push(slug);
+                }
+              }
+            });
+          }
+          
+          saveData();
+          renderTermsGrid();
+        } else {
+          throw new Error("Empty Response");
+        }
+      } catch (err) {
+        console.error("Gemini API Error", err);
+        // Fallback to manual card edit prompt
+        state.terms[slug] = {
+          term: termText,
+          definition: "Não foi possível resumir online. Clique em 'Editar Significado' para escrever o resumo você mesmo.",
+          category: "custom",
+          connections: [],
+          notes: "",
+          x: Math.random() * 400 + 100,
+          y: Math.random() * 250 + 80,
+          createdAt: Date.now()
+        };
+        saveData();
+        renderTermsGrid();
+        showToast(`Erro na API ao resumir "${termText}". Modo Local Ativado.`, true);
+      }
+    } else {
+      // Local default for custom unknown words
+      state.terms[slug] = {
+        term: termText,
+        definition: "Definição não cadastrada no dicionário offline. Clique em 'Editar Significado' para resumir.",
+        category: "custom",
+        connections: [],
+        notes: "",
+        x: Math.random() * 400 + 100,
+        y: Math.random() * 250 + 80,
+        createdAt: Date.now()
+      };
+      // Don't save/render per-term here; batch at the end
+    }
+  }
+
+  // Batch save and render once after processing all terms
+  saveData();
+  renderTermsGrid();
+  showToast("Termos processados!");
+}
+
+// Fetch summaries directly from client-side Gemini API
+async function fetchGeminiSummary(term) {
+  const apiKey = state.geminiApiKey.trim();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  
+  const systemPrompt = `Você é um tutor didático multidisciplinar, especialista em diversas áreas do conhecimento.
+  Crie um resumo explicativo simplificado porém cientificamente correto sobre o termo/conceito: "${term}".
+  Classifique o termo em apenas uma destas categorias aceitas: "ciencias", "humanas", "exatas", "linguagens", "tecnologia", "custom".
+  Forneça uma lista de até 3 palavras-chave/termos minúsculos fortemente relacionados.
+  A resposta DEVE ser estritamente em formato JSON válido, respeitando o seguinte esquema de chaves:
+  {
+    "term": "Nome Formatado do Termo",
+    "definition": "Sua explicação em português (limite de 3 parágrafos curtos, cerca de 80-120 palavras)",
+    "category": "categoria-escolhida",
+    "connections": ["termo-relacionado-1", "termo-relacionado-2"]
+  }
+  Retorne APENAS o JSON puro. Não englobe com blocos de marcação de markdown (como \`\`\`json).`;
+
+  const payload = {
+    contents: [{
+      parts: [{
+        text: systemPrompt
+      }]
+    }],
+    generationConfig: {
+      responseMimeType: "application/json"
+    }
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    let errMsg = `HTTP ${response.status}`;
+    try {
+      const errData = await response.json();
+      if (errData.error && errData.error.message) {
+        errMsg = errData.error.message;
+      }
+    } catch (_) {}
+    throw new Error(errMsg);
+  }
+
+  const responseData = await response.json();
+  
+  // Parse response with robust error handling
+  try {
+    if (responseData.candidates && responseData.candidates[0] &&
+        responseData.candidates[0].content &&
+        responseData.candidates[0].content.parts &&
+        responseData.candidates[0].content.parts[0] &&
+        responseData.candidates[0].content.parts[0].text) {
+      const jsonText = responseData.candidates[0].content.parts[0].text.trim();
+      return JSON.parse(jsonText);
+    }
+  } catch (parseErr) {
+    console.error("Failed to parse Gemini response JSON:", parseErr);
+    throw new Error("Resposta da API em formato inválido.");
+  }
+  return null;
+}
+
+// ----------------------------------------------------
+// BOARD RENDERING (DASHBOARD)
+// ----------------------------------------------------
+
+function renderTermsGrid() {
+  elements.termsGrid.innerHTML = "";
+  
+  // Filter Terms
+  const filteredTerms = Object.keys(state.terms).filter(key => {
+    const item = state.terms[key];
+    const matchSearch = item.term.toLowerCase().includes(state.filters.search) || 
+                        (item.definition || '').toLowerCase().includes(state.filters.search) ||
+                        (item.notes || '').toLowerCase().includes(state.filters.search);
+    
+    const matchCategory = state.filters.category === "all" || item.category === state.filters.category;
+    
+    return matchSearch && matchCategory;
+  });
+
+  if (filteredTerms.length === 0) {
+    elements.termsGrid.innerHTML = `
+      <div class="empty-state">
+        <i class="fa-solid fa-folder-open empty-icon"></i>
+        <h4 class="empty-title">Nenhum termo por aqui!</h4>
+        <p class="empty-desc">Experimente digitar termos de rede na barra superior ou mude o filtro para visualizar outros cartões.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Sort terms by date created descending
+  filteredTerms.sort((a, b) => state.terms[b].createdAt - state.terms[a].createdAt);
+
+  filteredTerms.forEach(key => {
+    const item = state.terms[key];
+    const card = document.createElement("div");
+    card.className = `term-card ${item.category || 'custom'}`;
+    if (item.loading) card.classList.add("loading");
+    card.setAttribute("data-key", key);
+
+    const connectionsCount = item.connections ? item.connections.length : 0;
+    const catLabel = getCategoryLabel(item.category);
+
+    card.innerHTML = `
+      <div>
+        <div class="card-header">
+          <h4 class="card-title">${escapeHTML(item.term)}</h4>
+          <div class="card-actions">
+            <button class="card-action-btn delete" data-delete-key="${escapeHTML(key)}" title="Excluir">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+        <p class="card-body">${escapeHTML(item.definition)}</p>
+      </div>
+      <div class="card-footer">
+        <span class="card-category">${escapeHTML(catLabel)}</span>
+        ${connectionsCount > 0 ? `
+          <span class="card-connections-count" title="${connectionsCount} conexões de termos">
+            <i class="fa-solid fa-link"></i> ${connectionsCount}
+          </span>
+        ` : ''}
+      </div>
+    `;
+
+    // Attach delete handler via data attribute (safer than inline onclick)
+    const deleteBtn = card.querySelector('[data-delete-key]');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteCard(key);
+      });
+    }
+
+    // Click on card opens side drawer details
+    card.addEventListener("click", () => {
+      if (item.loading) return;
+      openDetailPanel(key);
+    });
+
+    elements.termsGrid.appendChild(card);
+  });
+}
+
+// Global functions for inline actions inside cards
+window.deleteCard = function(key) {
+  if (confirm(`Excluir o termo "${state.terms[key].term}"?`)) {
+    Object.keys(state.terms).forEach(otherKey => {
+      if (Array.isArray(state.terms[otherKey].connections)) {
+        state.terms[otherKey].connections = state.terms[otherKey].connections.filter(c => c !== key);
+      }
+    });
+    delete state.terms[key];
+    saveData();
+    if (state.selectedTermKey === key) {
+      elements.detailPanel.classList.remove("open");
+      state.selectedTermKey = null;
+    }
+    renderTermsGrid();
+    showToast("Termo removido.");
+  }
+};
+
+function getCategoryLabel(cat) {
+  const dict = {
+    "ciencias": "Ciências",
+    "humanas": "Humanas",
+    "exatas": "Exatas",
+    "linguagens": "Linguagens",
+    "tecnologia": "Tecnologia",
+    "custom": "Personalizado"
+  };
+  return dict[cat] || "Personalizado";
+}
+
+// ----------------------------------------------------
+// DETAILS PANEL CONTROLLER
+// ----------------------------------------------------
+
+function openDetailPanel(key) {
+  const item = state.terms[key];
+  if (!item) return;
+
+  state.selectedTermKey = key;
+  elements.detailTitle.innerText = item.term;
+  
+  // Category indicator
+  elements.detailCategory.innerText = getCategoryLabel(item.category);
+  elements.detailCategory.className = `detail-category-badge`;
+  
+  // Specific category styling
+  const catColors = {
+    "ciencias": { color: "var(--accent-green)", bg: "rgba(16, 185, 129, 0.1)" },
+    "humanas": { color: "var(--accent-purple)", bg: "rgba(139, 92, 246, 0.1)" },
+    "exatas": { color: "var(--accent-blue)", bg: "rgba(79, 172, 254, 0.1)" },
+    "linguagens": { color: "var(--accent-pink)", bg: "rgba(236, 72, 153, 0.1)" },
+    "tecnologia": { color: "var(--accent-cyan)", bg: "rgba(0, 242, 254, 0.1)" },
+    "custom": { color: "var(--accent-orange)", bg: "rgba(245, 158, 11, 0.1)" }
+  };
+  const catStyle = catColors[item.category] || catColors["custom"];
+  elements.detailCategory.style.color = catStyle.color;
+  elements.detailCategory.style.background = catStyle.bg;
+  elements.detailCategory.style.border = `1px solid ${catStyle.color}`;
+  
+  // Definition and lecture notes
+  elements.detailDefinition.innerText = item.definition;
+  elements.detailNotesInput.value = item.notes || "";
+  
+  // Render connected terms
+  elements.detailConnectionsList.innerHTML = "";
+  if (item.connections && item.connections.length > 0) {
+    item.connections.forEach(connKey => {
+      const connItem = state.terms[connKey];
+      if (connItem) {
+        const pill = document.createElement("div");
+        pill.className = "connection-pill";
+        pill.innerHTML = `
+          <span>${escapeHTML(connItem.term)}</span>
+          <i class="fa-solid fa-xmark connection-delete" title="Romper conexão"></i>
+        `;
+        // Delete connection handler via addEventListener (safer than inline onclick)
+        const deleteIcon = pill.querySelector('.connection-delete');
+        deleteIcon.addEventListener('click', (e) => {
+          e.stopPropagation();
+          removeConnection(key, connKey);
+        });
+        pill.addEventListener("click", () => {
+          openDetailPanel(connKey);
+        });
+        elements.detailConnectionsList.appendChild(pill);
+      }
+    });
+  }
+  
+  // Add Connection Button
+  const addBtn = document.createElement("div");
+  addBtn.className = "connection-pill add-connection-btn";
+  addBtn.innerHTML = `<i class="fa-solid fa-plus"></i> Conectar...`;
+  addBtn.onclick = openAddConnectionDialog;
+  elements.detailConnectionsList.appendChild(addBtn);
+
+  // Open the panel
+  elements.detailPanel.classList.add("open");
+}
+
+// Regenerate term using Gemini API
+async function regenerateTermWithAi() {
+  const key = state.selectedTermKey;
+  if (!key || !state.terms[key]) return;
+  
+  if (!state.geminiApiKey || state.geminiApiKey.trim() === "") {
+    showToast("Por favor, configure uma chave da API do Gemini nas configurações.", true);
+    return;
+  }
+  
+  const originalTerm = state.terms[key].term;
+  showToast(`Consultando Gemini para "${originalTerm}"...`);
+  
+  state.terms[key].definition = "Consultando inteligência artificial do Gemini... Aguarde.";
+  openDetailPanel(key);
+  renderTermsGrid();
+  
+  try {
+    const aiResult = await fetchGeminiSummary(originalTerm);
+    if (aiResult) {
+      state.terms[key].term = aiResult.term || originalTerm;
+      state.terms[key].definition = aiResult.definition || "Sem definição disponível.";
+      state.terms[key].category = aiResult.category || state.terms[key].category;
+      
+      if (Array.isArray(aiResult.connections)) {
+        aiResult.connections.forEach(connSlug => {
+          const cleanedConn = connSlug.toLowerCase().trim();
+          if (state.terms[cleanedConn] && cleanedConn !== key) {
+            if (!state.terms[key].connections.includes(cleanedConn)) {
+              state.terms[key].connections.push(cleanedConn);
+            }
+            if (!state.terms[cleanedConn].connections.includes(key)) {
+              state.terms[cleanedConn].connections.push(key);
+            }
+          }
+        });
+      }
+      
+      saveData();
+      openDetailPanel(key);
+      renderTermsGrid();
+      showToast("Termo atualizado com sucesso!");
+    } else {
+      throw new Error("Resposta da IA vazia ou inválida.");
+    }
+  } catch (err) {
+    console.error("Gemini API Error during regeneration:", err);
+    state.terms[key].definition = `Erro ao consultar API do Gemini.\n\nDetalhes: ${err.message}\n\nVerifique se a chave de API fornecida nas configurações está correta.`;
+    openDetailPanel(key);
+    renderTermsGrid();
+    showToast("Erro ao consultar o Gemini.", true);
+  }
+}
+
+function openAddConnectionDialog() {
+  const currentKey = state.selectedTermKey;
+  if (!currentKey) return;
+
+  // Clear options
+  elements.connSelect.innerHTML = "";
+  
+  // Populate select options with all terms EXCEPT current and already connected terms
+  const currentItem = state.terms[currentKey];
+  let hasEligible = false;
+
+  Object.keys(state.terms).forEach(key => {
+    if (key !== currentKey && !currentItem.connections.includes(key)) {
+      const option = document.createElement("option");
+      option.value = key;
+      option.text = state.terms[key].term;
+      elements.connSelect.appendChild(option);
+      hasEligible = true;
+    }
+  });
+
+  if (!hasEligible) {
+    showToast("Não há outros termos disponíveis para conectar.", true);
+    return;
+  }
+
+  elements.addConnModal.classList.add("open");
+}
+
+window.removeConnection = function(termA, termB) {
+  if (state.terms[termA]) {
+    state.terms[termA].connections = state.terms[termA].connections.filter(c => c !== termB);
+  }
+  if (state.terms[termB]) {
+    state.terms[termB].connections = state.terms[termB].connections.filter(c => c !== termA);
+  }
+  saveData();
+  openDetailPanel(termA);
+  showToast("Conexão removida.");
+};
+
+// ----------------------------------------------------
+// STUDY MODULE: FLASHCARDS
+// ----------------------------------------------------
+
+function initFlashcards() {
+  state.flashcards.cards = Object.keys(state.terms);
+  state.flashcards.currentIndex = 0;
+  state.flashcards.isFlipped = false;
+  elements.flashcardElement.classList.remove("flipped");
+  
+  renderFlashcard();
+}
+
+function renderFlashcard() {
+  const keys = state.flashcards.cards;
+  if (keys.length === 0) {
+    elements.flashcardStage.style.display = "none";
+    elements.fcBtnCorrect.style.display = "none";
+    elements.fcBtnWrong.style.display = "none";
+    elements.fcPrevBtn.style.display = "none";
+    elements.fcNextBtn.style.display = "none";
+    elements.fcCounter.innerText = "Nenhum termo cadastrado.";
+    
+    // Add custom helper inside wrapper
+    const wrapper = document.querySelector(".flashcards-wrapper");
+    let helpMsg = document.getElementById("fc-help-msg");
+    if (!helpMsg) {
+      helpMsg = document.createElement("p");
+      helpMsg.id = "fc-help-msg";
+      helpMsg.className = "empty-desc";
+      helpMsg.innerHTML = "Adicione palavras no seu Dashboard para poder gerar Flashcards de estudo!";
+      wrapper.appendChild(helpMsg);
+    }
+    return;
+  }
+
+  elements.flashcardStage.style.display = "block";
+  elements.fcBtnCorrect.style.display = "flex";
+  elements.fcBtnWrong.style.display = "flex";
+  elements.fcPrevBtn.style.display = "flex";
+  elements.fcNextBtn.style.display = "flex";
+  const helpMsg = document.getElementById("fc-help-msg");
+  if (helpMsg) helpMsg.remove();
+
+  const currentKey = keys[state.flashcards.currentIndex];
+  const item = state.terms[currentKey];
+  
+  elements.fcFrontTerm.innerText = item.term;
+  elements.fcFrontCategory.innerText = getCategoryLabel(item.category);
+  elements.fcBackCategory.innerText = "Definição - " + getCategoryLabel(item.category);
+  
+  // Combine definition and personal notes (escape user content to prevent XSS)
+  let explanation = `<p>${escapeHTML(item.definition)}</p>`;
+  if (item.notes) {
+    explanation += `<div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 0.85rem; color: var(--accent-cyan); text-align: left;"><i class="fa-solid fa-pen"></i> <strong>Anotações:</strong> ${escapeHTML(item.notes)}</div>`;
+  }
+  elements.fcBackDefinition.innerHTML = explanation;
+  
+  elements.fcCounter.innerText = `${state.flashcards.currentIndex + 1} / ${keys.length}`;
+}
+
+function advanceFlashcard(offset) {
+  const count = state.flashcards.cards.length;
+  if (count === 0) return;
+  
+  // Reset flipped state first with animation delay if flipped
+  if (state.flashcards.isFlipped) {
+    elements.flashcardElement.classList.remove("flipped");
+    state.flashcards.isFlipped = false;
+    setTimeout(() => {
+      changeCardIndex();
+    }, 200);
+  } else {
+    changeCardIndex();
+  }
+
+  function changeCardIndex() {
+    state.flashcards.currentIndex = (state.flashcards.currentIndex + offset + count) % count;
+    renderFlashcard();
+  }
+}
+
+// ----------------------------------------------------
+// STUDY MODULE: QUIZ
+// ----------------------------------------------------
+
+function initQuiz() {
+  const keys = Object.keys(state.terms);
+  if (keys.length < 4) {
+    elements.quizCard.innerHTML = `
+      <div class="empty-state" style="padding: 2rem 0;">
+        <i class="fa-solid fa-triangle-exclamation empty-icon" style="color: var(--accent-orange)"></i>
+        <h4 class="empty-title">Termos Insuficientes</h4>
+        <p class="empty-desc">Você precisa de pelo menos <strong>4 termos cadastrados</strong> para gerar perguntas de múltipla escolha. Atualmente você tem apenas ${keys.length}.</p>
+      </div>
+    `;
+    return;
+  }
+
+  // Restore initial HTML structure for active quiz
+  elements.quizCard.innerHTML = `
+    <div class="quiz-header">
+      <span class="quiz-progress" id="quiz-progress">Pergunta 0 de 0</span>
+      <span class="quiz-score" id="quiz-score">Acertos: 0</span>
+    </div>
+    <div class="quiz-question-container">
+      <p class="quiz-question" id="quiz-question-text">Carregando pergunta...</p>
+    </div>
+    <div class="quiz-options" id="quiz-options-container"></div>
+    <div class="quiz-footer">
+      <button class="btn-primary" id="quiz-next-btn" style="display: none;">
+        Próxima Pergunta <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    </div>
+  `;
+
+  // Re-hook pointers
+  elements.quizProgress = document.getElementById("quiz-progress");
+  elements.quizScore = document.getElementById("quiz-score");
+  elements.quizQuestionText = document.getElementById("quiz-question-text");
+  elements.quizOptionsContainer = document.getElementById("quiz-options-container");
+  elements.quizNextBtn = document.getElementById("quiz-next-btn");
+  elements.quizNextBtn.addEventListener("click", () => {
+    elements.quizNextBtn.style.display = "none";
+    state.quiz.currentIndex++;
+    renderQuizQuestion();
+  });
+
+  // Setup 10 random questions
+  state.quiz.questions = generateQuizQuestions(keys, 10);
+  state.quiz.currentIndex = 0;
+  state.quiz.score = 0;
+  
+  renderQuizQuestion();
+}
+
+function generateQuizQuestions(allKeys, maxQuestions) {
+  const questions = [];
+  const shuffledKeys = [...allKeys].sort(() => Math.random() - 0.5);
+  const quizLength = Math.min(shuffledKeys.length, maxQuestions);
+
+  for (let i = 0; i < quizLength; i++) {
+    const correctKey = shuffledKeys[i];
+    const correctItem = state.terms[correctKey];
+    
+    // Choose Question Type: 0 = Given Definition find Name, 1 = Given Name find Definition
+    const qType = Math.random() > 0.5 ? 0 : 1;
+    
+    // Pick 3 distractors
+    const distractors = allKeys.filter(k => k !== correctKey).sort(() => Math.random() - 0.5).slice(0, 3);
+    
+    const options = [];
+    // Correct Option
+    options.push({
+      key: correctKey,
+      text: qType === 0 ? correctItem.term : correctItem.definition,
+      isCorrect: true
+    });
+    // Distractor Options
+    distractors.forEach(dk => {
+      options.push({
+        key: dk,
+        text: qType === 0 ? state.terms[dk].term : state.terms[dk].definition,
+        isCorrect: false
+      });
+    });
+
+    // Shuffle options
+    options.sort(() => Math.random() - 0.5);
+
+    questions.push({
+      type: qType,
+      targetKey: correctKey,
+      questionText: qType === 0 
+        ? `Qual é o termo correspondente à seguinte definição?<br><br><em>"${escapeHTML(correctItem.definition)}"</em>` 
+        : `Qual é o significado correto do termo: <strong>${escapeHTML(correctItem.term)}</strong>?`,
+      options: options
+    });
+  }
+
+  return questions;
+}
+
+function renderQuizQuestion() {
+  const currentIdx = state.quiz.currentIndex;
+  const questionsCount = state.quiz.questions.length;
+
+  if (currentIdx >= questionsCount) {
+    // Show End Screen
+    elements.quizProgress.innerText = "Fim do Quiz!";
+    elements.quizQuestionText.innerHTML = `
+      <div style="text-align: center; padding: 1.5rem 0;">
+        <i class="fa-solid fa-trophy" style="font-size: 3rem; color: var(--accent-cyan); margin-bottom: 1rem;"></i>
+        <h3>Quiz Concluído!</h3>
+        <p style="margin-top: 0.5rem; color: var(--text-secondary);">Você acertou <strong>${state.quiz.score}</strong> de <strong>${questionsCount}</strong> perguntas.</p>
+        <button class="btn-primary" onclick="initQuiz()" style="margin: 1.5rem auto 0 auto;">Jogar Novamente</button>
+      </div>
+    `;
+    elements.quizOptionsContainer.innerHTML = "";
+    elements.quizNextBtn.style.display = "none";
+    return;
+  }
+
+  state.quiz.userAnswered = false;
+  state.quiz.selectedOptionIdx = null;
+  
+  elements.quizProgress.innerText = `Pergunta ${currentIdx + 1} de ${questionsCount}`;
+  elements.quizScore.innerText = `Acertos: ${state.quiz.score}`;
+
+  const currentQuestion = state.quiz.questions[currentIdx];
+  elements.quizQuestionText.innerHTML = currentQuestion.questionText;
+  
+  elements.quizOptionsContainer.innerHTML = "";
+  currentQuestion.options.forEach((opt, idx) => {
+    const btn = document.createElement("button");
+    btn.className = "quiz-option";
+    btn.innerHTML = `<span class="option-bullet">${String.fromCharCode(65 + idx)}</span> <span style="flex: 1;">${escapeHTML(opt.text)}</span>`;
+    
+    btn.addEventListener("click", () => {
+      if (state.quiz.userAnswered) return;
+      handleQuizAnswer(idx, opt.isCorrect, btn);
+    });
+
+    elements.quizOptionsContainer.appendChild(btn);
+  });
+}
+
+function handleQuizAnswer(idx, isCorrect, clickedBtn) {
+  state.quiz.userAnswered = true;
+  state.quiz.selectedOptionIdx = idx;
+  
+  const currentQuestion = state.quiz.questions[state.quiz.currentIndex];
+  
+  // Highlight options
+  const optionButtons = elements.quizOptionsContainer.querySelectorAll(".quiz-option");
+  optionButtons.forEach((btn, buttonIdx) => {
+    const isOptionCorrect = currentQuestion.options[buttonIdx].isCorrect;
+    if (isOptionCorrect) {
+      btn.classList.add("correct");
+      btn.querySelector(".option-bullet").innerHTML = `<i class="fa-solid fa-check"></i>`;
+    } else if (buttonIdx === idx) {
+      btn.classList.add("wrong");
+      btn.querySelector(".option-bullet").innerHTML = `<i class="fa-solid fa-xmark"></i>`;
+    }
+  });
+
+  if (isCorrect) {
+    state.quiz.score++;
+    elements.quizScore.innerText = `Acertos: ${state.quiz.score}`;
+    showToast("Parabéns! Resposta correta.");
+  } else {
+    showToast("Hum, não foi dessa vez.", true);
+  }
+
+  elements.quizNextBtn.style.display = "flex";
+}
+
+// ----------------------------------------------------
+// INTERACTIVE MIND MAP (SVG NODE GRAPH)
+// ----------------------------------------------------
+
+function initMindmap() {
+  // Ensure default coordinates are set for new nodes
+  arrangeCoordinatesIfEmpty();
+  renderMindmap();
+}
+
+function arrangeCoordinatesIfEmpty() {
+  const keys = Object.keys(state.terms);
+  let changed = false;
+  
+  keys.forEach((key, idx) => {
+    const node = state.terms[key];
+    if (node.x === undefined || node.y === undefined) {
+      // Spiral positioning from center
+      const angle = idx * 0.75;
+      const radius = 40 + idx * 25;
+      node.x = 350 + Math.cos(angle) * radius;
+      node.y = 200 + Math.sin(angle) * radius;
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    saveData();
+  }
+}
+
+function arrangeMindmapNodesCircle() {
+  const keys = Object.keys(state.terms);
+  const count = keys.length;
+  const cx = 350;
+  const cy = 200;
+  const radius = Math.min(cx - 80, cy - 40, count * 15 + 80);
+
+  keys.forEach((key, idx) => {
+    const angle = (idx / count) * 2 * Math.PI;
+    state.terms[key].x = cx + Math.cos(angle) * radius;
+    state.terms[key].y = cy + Math.sin(angle) * radius;
+  });
+  saveData();
+}
+
+function renderMindmap() {
+  elements.linksGroup.innerHTML = "";
+  elements.nodesGroup.innerHTML = "";
+
+  const keys = Object.keys(state.terms);
+  if (keys.length === 0) return;
+
+  const activeSrc = state.mindmap.activeConnSource;
+
+  // 1. Draw Connection Lines
+  const drawnPairs = new Set();
+  keys.forEach(sourceKey => {
+    const sourceNode = state.terms[sourceKey];
+    if (sourceNode.connections) {
+      sourceNode.connections.forEach(destKey => {
+        const destNode = state.terms[destKey];
+        if (destNode) {
+          // Prevent drawing double lines for undirected graph representation
+          const pairId = [sourceKey, destKey].sort().join("-");
+          if (!drawnPairs.has(pairId)) {
+            drawnPairs.add(pairId);
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", sourceNode.x);
+            line.setAttribute("y1", sourceNode.y);
+            line.setAttribute("x2", destNode.x);
+            line.setAttribute("y2", destNode.y);
+            
+            // Highlight connections if node is active
+            let isHighlighted = false;
+            if (activeSrc === sourceKey || activeSrc === destKey) {
+              isHighlighted = true;
+            }
+            
+            line.setAttribute("class", `mindmap-link ${isHighlighted ? 'highlighted' : ''}`);
+            elements.linksGroup.appendChild(line);
+          }
+        }
+      });
+    }
+  });
+
+  // 2. Draw Nodes
+  keys.forEach(key => {
+    const node = state.terms[key];
+    const nodeGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    nodeGroup.setAttribute("class", "mindmap-node");
+    nodeGroup.setAttribute("transform", `translate(${node.x}, ${node.y})`);
+    nodeGroup.setAttribute("data-id", key);
+
+    // Color definitions per category
+    const catColors = {
+      "ciencias": "var(--accent-green)",
+      "humanas": "var(--accent-purple)",
+      "exatas": "var(--accent-blue)",
+      "linguagens": "var(--accent-pink)",
+      "tecnologia": "var(--accent-cyan)",
+      "custom": "var(--accent-orange)"
+    };
+    const color = catColors[node.category] || "var(--accent-orange)";
+
+    // Outer Circle for Active connecting indicator
+    const outerCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    outerCircle.setAttribute("r", activeSrc === key ? "32" : "25");
+    outerCircle.setAttribute("fill", "none");
+    outerCircle.setAttribute("stroke", color);
+    
+    if (activeSrc === key) {
+      outerCircle.setAttribute("stroke-width", "3");
+      outerCircle.setAttribute("stroke-dasharray", "4 2");
+      // Add pulsing animations style inline
+      const animate = document.createElementNS("http://www.w3.org/2000/svg", "animate");
+      animate.setAttribute("attributeName", "r");
+      animate.setAttribute("values", "28;34;28");
+      animate.setAttribute("dur", "1.5s");
+      animate.setAttribute("repeatCount", "indefinite");
+      outerCircle.appendChild(animate);
+    } else {
+      outerCircle.setAttribute("stroke-width", "2");
+    }
+
+    // Inner Solid Circle
+    const innerCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    innerCircle.setAttribute("r", "22");
+    innerCircle.setAttribute("fill", "#111322");
+    innerCircle.setAttribute("stroke", color);
+    innerCircle.setAttribute("stroke-width", "1");
+
+    // Text Label
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.setAttribute("dy", "4");
+    
+    // Truncate term if too long for map
+    let displayName = node.term;
+    if (displayName.includes("(")) {
+      // E.g., DNS (Domain Name System) -> DNS
+      displayName = displayName.split("(")[0].trim();
+    }
+    if (displayName.length > 8) {
+      displayName = displayName.substring(0, 7) + "..";
+    }
+    text.textContent = displayName;
+
+    nodeGroup.appendChild(outerCircle);
+    nodeGroup.appendChild(innerCircle);
+    nodeGroup.appendChild(text);
+
+    // Event listeners for Drag & Drop
+    nodeGroup.addEventListener("mousedown", (e) => {
+      e.stopPropagation();
+      state.mindmap.draggedNodeId = key;
+      const rect = elements.mindmapSvg.getBoundingClientRect();
+      // Record offset within the node
+      state.mindmap.dragOffset = {
+        x: e.clientX - rect.left - node.x,
+        y: e.clientY - rect.top - node.y
+      };
+    });
+
+    nodeGroup.addEventListener("click", (e) => {
+      e.stopPropagation();
+      handleMindmapNodeClick(key);
+    });
+
+    // Double click to open Details drawer
+    nodeGroup.addEventListener("dblclick", (e) => {
+      e.stopPropagation();
+      switchTab("dashboard");
+      openDetailPanel(key);
+    });
+
+    elements.nodesGroup.appendChild(nodeGroup);
+  });
+}
+
+function handleMindmapNodeClick(clickedKey) {
+  const activeSrc = state.mindmap.activeConnSource;
+  
+  if (activeSrc === null) {
+    // Select this node as connection source
+    state.mindmap.activeConnSource = clickedKey;
+    showToast(`Conectando de "${state.terms[clickedKey].term}". Clique em outro termo para conectar/desconectar.`);
+    renderMindmap();
+  } else if (activeSrc === clickedKey) {
+    // Cancel action
+    state.mindmap.activeConnSource = null;
+    renderMindmap();
+  } else {
+    // Connect Node A and Node B
+    const sourceNode = state.terms[activeSrc];
+    const destNode = state.terms[clickedKey];
+    
+    if (sourceNode.connections.includes(clickedKey)) {
+      // Disconnect
+      sourceNode.connections = sourceNode.connections.filter(c => c !== clickedKey);
+      destNode.connections = destNode.connections.filter(c => c !== activeSrc);
+      showToast("Conexão removida.");
+    } else {
+      // Connect
+      sourceNode.connections.push(clickedKey);
+      destNode.connections.push(activeSrc);
+      showToast("Conexão criada!");
+    }
+    
+    saveData();
+    state.mindmap.activeConnSource = null;
+    renderMindmap();
+  }
+}
+
+function setupSvgHandlers() {
+  // Drag animation frame reference for throttling
+  let dragAnimFrameId = null;
+
+  // MouseMove for Dragging (throttled with requestAnimationFrame)
+  document.addEventListener("mousemove", (e) => {
+    if (state.mindmap.draggedNodeId) {
+      // Cancel previous pending frame to avoid stacking
+      if (dragAnimFrameId) cancelAnimationFrame(dragAnimFrameId);
+      dragAnimFrameId = requestAnimationFrame(() => {
+        const key = state.mindmap.draggedNodeId;
+        if (!key) return;
+        const rect = elements.mindmapSvg.getBoundingClientRect();
+        const newX = e.clientX - rect.left - state.mindmap.dragOffset.x;
+        const newY = e.clientY - rect.top - state.mindmap.dragOffset.y;
+        
+        // Constrain within visible svg viewport bounds
+        state.terms[key].x = Math.max(30, Math.min(rect.width - 30, newX));
+        state.terms[key].y = Math.max(30, Math.min(rect.height - 30, newY));
+        
+        // Real-time update lines and node position
+        updateNodeSvgPosition(key);
+        dragAnimFrameId = null;
+      });
+    }
+  });
+
+  // MouseUp terminates drag
+  document.addEventListener("mouseup", () => {
+    if (state.mindmap.draggedNodeId) {
+      state.mindmap.draggedNodeId = null;
+      saveData();
+    }
+  });
+
+  // Clicking empty SVG canvas cancels active connections selection
+  elements.mindmapSvg.addEventListener("click", () => {
+    if (state.mindmap.activeConnSource !== null) {
+      state.mindmap.activeConnSource = null;
+      renderMindmap();
+    }
+  });
+}
+
+function updateNodeSvgPosition(key) {
+  const node = state.terms[key];
+  
+  // Find node group element and translate
+  const g = elements.nodesGroup.querySelector(`g[data-id="${key}"]`);
+  if (g) {
+    g.setAttribute("transform", `translate(${node.x}, ${node.y})`);
+  }
+
+  // Redraw all connection lines (single call instead of redundant loop)
+  renderLinksRealtime(key);
+}
+
+function renderLinksRealtime(movedKey) {
+  elements.linksGroup.innerHTML = "";
+  const keys = Object.keys(state.terms);
+  const activeSrc = state.mindmap.activeConnSource;
+  const drawnPairs = new Set();
+
+  keys.forEach(sourceKey => {
+    const sourceNode = state.terms[sourceKey];
+    if (!Array.isArray(sourceNode.connections)) return;
+    sourceNode.connections.forEach(destKey => {
+      const destNode = state.terms[destKey];
+      if (destNode) {
+        const pairId = [sourceKey, destKey].sort().join("-");
+        if (!drawnPairs.has(pairId)) {
+          drawnPairs.add(pairId);
+          const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          line.setAttribute("x1", sourceNode.x);
+          line.setAttribute("y1", sourceNode.y);
+          line.setAttribute("x2", destNode.x);
+          line.setAttribute("y2", destNode.y);
+          
+          let isHighlighted = false;
+          if (activeSrc === sourceKey || activeSrc === destKey) {
+            isHighlighted = true;
+          }
+          line.setAttribute("class", `mindmap-link ${isHighlighted ? 'highlighted' : ''}`);
+          elements.linksGroup.appendChild(line);
+        }
+      }
+    });
+  });
+}

@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="StudyFlow — Ferramenta interativa para estudantes organizarem termos e conceitos de qualquer matéria, com flashcards, quizzes e mapas mentais.">
+  <meta name="theme-color" content="#0a0b12">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+  <title>StudyFlow - Organize, Estude e Domine Qualquer Tema</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- FontAwesome for Premium Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="logo-container">
+      <div class="logo-icon">
+        <i class="fa-solid fa-book-open"></i>
+      </div>
+      <span class="logo-text">StudyFlow</span>
+    </div>
+    
+    <div class="status-badge" id="api-status-badge">
+      <span class="status-dot local" id="api-status-dot"></span>
+      <span id="api-status-text">Modo Local (Offline)</span>
+    </div>
+
+    <div class="header-actions">
+      <button class="icon-btn mobile-menu-btn" id="mobile-menu-toggle" title="Menu" aria-label="Abrir menu de navegação">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <button class="icon-btn" id="open-settings-btn" title="Configurações e Chave API">
+        <i class="fa-solid fa-gear"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Application Body -->
+  <div class="app-container">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="app-sidebar-nav">
+      <nav class="nav-menu" role="navigation" aria-label="Menu principal">
+        <div class="nav-item active" data-tab="dashboard" role="button" tabindex="0" aria-label="Dashboard">
+          <i class="fa-solid fa-table-columns"></i>
+          <span>Dashboard</span>
+        </div>
+        <div class="nav-item" data-tab="flashcards" role="button" tabindex="0" aria-label="Flashcards">
+          <i class="fa-solid fa-clone"></i>
+          <span>Flashcards</span>
+        </div>
+        <div class="nav-item" data-tab="quiz" role="button" tabindex="0" aria-label="Quiz de Fixação">
+          <i class="fa-solid fa-graduation-cap"></i>
+          <span>Quiz de Fixação</span>
+        </div>
+        <div class="nav-item" data-tab="mindmap" role="button" tabindex="0" aria-label="Mapa de Conexões">
+          <i class="fa-solid fa-circle-nodes"></i>
+          <span>Mapa de Conexões</span>
+        </div>
+      </nav>
+      
+      <div class="dump-tip" style="padding: 0 1rem; color: var(--text-muted); font-size: 0.7rem; text-align: center;">
+        Feito para estudantes 🎓
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main>
+      
+      <!-- 1. DASHBOARD TAB -->
+      <section class="tab-content active" id="tab-dashboard">
+        
+        <!-- Quick Dump Input -->
+        <div class="quick-dump-container">
+          <div class="dump-box">
+            <div class="dump-input-wrapper">
+              <textarea 
+                class="dump-textarea" 
+                id="dump-textarea" 
+                placeholder="Insira termos aqui... (Ex: Fotossíntese, Democracia, Algoritmo, Metáfora) - Pressione Enter para adicionar!"
+              ></textarea>
+              <button class="btn-primary" id="add-term-btn">
+                <i class="fa-solid fa-bolt"></i> Processar
+              </button>
+            </div>
+            <div class="dump-tip">
+              <span><i class="fa-solid fa-lightbulb"></i> Você pode jogar vários termos separados por vírgula.</span>
+              <span>Pressione <code>Shift + Enter</code> para nova linha.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filters & Search Controls -->
+        <div class="board-controls">
+          <div class="filter-tabs" id="category-filter-tabs">
+            <button class="filter-tab active" data-filter="all">Todos</button>
+            <button class="filter-tab" data-filter="ciencias">Ciências</button>
+            <button class="filter-tab" data-filter="humanas">Humanas</button>
+            <button class="filter-tab" data-filter="exatas">Exatas</button>
+            <button class="filter-tab" data-filter="linguagens">Linguagens</button>
+            <button class="filter-tab" data-filter="tecnologia">Tecnologia</button>
+            <button class="filter-tab" data-filter="custom">Personalizados</button>
+          </div>
+
+          <div class="search-wrapper">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" class="search-input" id="search-input" placeholder="Buscar palavra ou conceito..." aria-label="Buscar termos">
+          </div>
+        </div>
+
+        <!-- Terms Board Grid & Detail View Container -->
+        <div class="board-content-wrapper">
+          
+          <!-- Grid of Term Cards -->
+          <div class="terms-grid-container">
+            <div class="terms-grid" id="terms-grid">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Detail Side Panel (Sliding) -->
+          <div class="detail-panel" id="detail-panel">
+            <div class="detail-header">
+              <div class="detail-title-wrapper">
+                <h3 class="detail-title" id="detail-title">Nome do Termo</h3>
+                <span class="detail-category-badge" id="detail-category">Protocolo</span>
+              </div>
+              <button class="icon-btn" id="close-detail-btn" title="Fechar painel">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <div class="detail-body">
+              <div class="detail-section">
+                <span class="section-label">Significado / Resumo</span>
+                <p class="detail-definition" id="detail-definition">Descrição detalhada do termo...</p>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;">
+                  <button class="filter-tab" id="edit-definition-btn" style="border-radius: 6px; padding: 0.3rem 0.6rem;">
+                    <i class="fa-solid fa-pen-to-square"></i> Editar Significado
+                  </button>
+                  <button class="filter-tab" id="regenerate-ai-btn" style="border-radius: 6px; padding: 0.3rem 0.6rem; border-color: var(--accent-cyan); color: var(--accent-cyan);">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Consultar IA do Gemini
+                  </button>
+                </div>
+              </div>
+
+              <div class="detail-section">
+                <span class="section-label">Anotações da Aula</span>
+                <textarea 
+                  class="notes-textarea" 
+                  id="detail-notes-input" 
+                  placeholder="Escreva anotações importantes ditas pelo professor ou exemplos práticos discutidos em sala de aula..."
+                ></textarea>
+              </div>
+
+              <div class="detail-section">
+                <span class="section-label">Termos Relacionados</span>
+                <div class="detail-connections-list" id="detail-connections-list">
+                  <!-- Connection Pills -->
+                </div>
+              </div>
+            </div>
+
+            <div class="detail-actions">
+              <button class="btn-secondary btn-danger" id="delete-term-btn">
+                <i class="fa-solid fa-trash-can"></i> Excluir Termo
+              </button>
+              <button class="btn-primary" id="save-notes-btn" style="flex: 1.5;">
+                <i class="fa-solid fa-floppy-disk"></i> Salvar Alterações
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- 2. FLASHCARDS TAB -->
+      <section class="tab-content" id="tab-flashcards">
+        <div class="flashcards-wrapper">
+          <div class="flashcard-stage" id="flashcard-stage">
+            <div class="flashcard" id="flashcard-element">
+              <!-- Front Side -->
+              <div class="card-face front">
+                <span class="flashcard-category" id="flashcard-front-category">Categoria</span>
+                <h2 class="flashcard-term" id="flashcard-front-term">Termo</h2>
+                <span class="flashcard-hint"><i class="fa-solid fa-rotate"></i> Clique para revelar a definição</span>
+              </div>
+              <!-- Back Side -->
+              <div class="card-face back">
+                <span class="flashcard-category" id="flashcard-back-category">Significado</span>
+                <div class="flashcard-definition" id="flashcard-back-definition">A definição do termo aparece aqui.</div>
+                <span class="flashcard-hint"><i class="fa-solid fa-rotate"></i> Clique para ver o termo</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flashcard-controls">
+            <button class="flashcard-btn wrong" id="fc-btn-wrong">
+              <i class="fa-solid fa-xmark"></i> Ainda Não Sei
+            </button>
+            
+            <div class="flashcard-navigation">
+              <button class="icon-btn" id="fc-prev-btn"><i class="fa-solid fa-chevron-left"></i></button>
+              <span class="flashcard-counter" id="fc-counter">0 / 0</span>
+              <button class="icon-btn" id="fc-next-btn"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+
+            <button class="flashcard-btn correct" id="fc-btn-correct">
+              <i class="fa-solid fa-check"></i> Já Aprendi!
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. QUIZ TAB -->
+      <section class="tab-content" id="tab-quiz">
+        <div class="quiz-wrapper">
+          <div class="quiz-card" id="quiz-card">
+            <div class="quiz-header">
+              <span class="quiz-progress" id="quiz-progress">Pergunta 0 de 0</span>
+              <span class="quiz-score" id="quiz-score">Acertos: 0</span>
+            </div>
+            
+            <div class="quiz-question-container">
+              <p class="quiz-question" id="quiz-question-text">Carregando pergunta...</p>
+            </div>
+
+            <div class="quiz-options" id="quiz-options-container">
+              <!-- Dynamically populated options -->
+            </div>
+
+            <div class="quiz-footer">
+              <button class="btn-primary" id="quiz-next-btn" style="display: none;">
+                Próxima Pergunta <i class="fa-solid fa-arrow-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. MIND MAP TAB -->
+      <section class="tab-content" id="tab-mindmap">
+        <div class="mindmap-wrapper">
+          <div class="mindmap-hint">
+            <i class="fa-solid fa-circle-info"></i> 
+            <strong>Dica:</strong> Arraste os termos para organizar seu fluxo de estudos. 
+            Clique em um termo e depois em outro para conectá-los (ou desconectá-los).
+          </div>
+          
+          <div class="mindmap-legend">
+            <div class="legend-item"><span class="legend-color" style="background: var(--accent-green)"></span> Ciências</div>
+            <div class="legend-item"><span class="legend-color" style="background: var(--accent-purple)"></span> Humanas</div>
+            <div class="legend-item"><span class="legend-color" style="background: var(--accent-blue)"></span> Exatas</div>
+            <div class="legend-item"><span class="legend-color" style="background: var(--accent-pink)"></span> Linguagens</div>
+            <div class="legend-item"><span class="legend-color" style="background: var(--accent-cyan)"></span> Tecnologia</div>
+            <div class="legend-item"><span class="legend-color" style="background: var(--accent-orange)"></span> Personalizados</div>
+          </div>
+
+          <!-- Mind Map Interactive SVG rendering area -->
+          <svg class="mindmap-svg" id="mindmap-svg">
+            <g id="links-group"></g>
+            <g id="nodes-group"></g>
+          </svg>
+
+          <div class="mindmap-controls">
+            <button class="filter-tab" id="mm-reset-btn" title="Redistribuir nós aleatoriamente">
+              <i class="fa-solid fa-arrows-rotate"></i> Organizar Nós
+            </button>
+            <button class="filter-tab" id="mm-clear-links-btn" title="Excluir todas as conexões personalizadas">
+              <i class="fa-solid fa-link-slash"></i> Limpar Conexões
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settings-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-sliders"></i> Configurações do StudyFlow</h3>
+        <i class="fa-solid fa-xmark close-btn" id="close-settings-btn"></i>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Gemini API Setup -->
+        <div class="form-group">
+          <label class="form-label" for="settings-gemini-key">Chave da API do Gemini (Opcional)</label>
+          <input 
+            type="password" 
+            class="form-input" 
+            id="settings-gemini-key" 
+            placeholder="AIzaSy..."
+          >
+          <div class="help-text">
+            Com a chave da API do Gemini, o StudyFlow pode criar resumos automáticos em português de qualquer palavra que você inventar ou jogar no campo de entrada.
+            Obtenha uma chave gratuita no <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">Google AI Studio</a>.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Banco de Dados Local</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="filter-tab" id="export-db-btn" style="flex: 1; padding: 0.6rem; border-radius: 6px;">
+              <i class="fa-solid fa-file-export"></i> Exportar JSON
+            </button>
+            <button class="filter-tab" id="import-db-btn" style="flex: 1; padding: 0.6rem; border-radius: 6px;">
+              <i class="fa-solid fa-file-import"></i> Importar JSON
+            </button>
+            <input type="file" id="import-db-input" accept=".json" style="display: none;">
+          </div>
+          <div class="help-text">
+            Você pode fazer backup de todos os seus termos e anotações e importá-los em outro computador.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Ações de Banco</label>
+          <button class="filter-tab btn-danger" id="clear-db-btn" style="padding: 0.6rem; border-radius: 6px; border-color: rgba(236,72,153,0.3)">
+            <i class="fa-solid fa-circle-exclamation"></i> Apagar Todos os Termos Salvos
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" id="cancel-settings-btn">Cancelar</button>
+        <button class="btn-primary" id="save-settings-btn">Salvar Configurações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Definition Modal -->
+  <div class="modal-overlay" id="edit-def-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-pen-to-square"></i> Editar Significado</h3>
+        <i class="fa-solid fa-xmark close-btn" id="close-edit-def-btn"></i>
+      </div>
+      
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="edit-def-term">Nome do Termo</label>
+          <input type="text" class="form-input" id="edit-def-term" readonly style="background: rgba(255,255,255,0.01); color: var(--text-secondary);">
+        </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-def-category">Categoria</label>
+            <select class="form-select" id="edit-def-category">
+              <option value="ciencias">Ciências</option>
+              <option value="humanas">Humanas</option>
+              <option value="exatas">Exatas</option>
+              <option value="linguagens">Linguagens</option>
+              <option value="tecnologia">Tecnologia</option>
+              <option value="custom">Personalizados</option>
+            </select>
+          </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-def-textarea">Descrição / Definição</label>
+          <textarea class="notes-textarea" id="edit-def-textarea" style="min-height: 100px;"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn-secondary" id="cancel-edit-def-btn">Cancelar</button>
+        <button class="btn-primary" id="save-edit-def-btn">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dynamic link modal/dialog -->
+  <div class="modal-overlay" id="add-conn-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-link"></i> Conectar Termo</h3>
+        <i class="fa-solid fa-xmark close-btn" id="close-conn-btn"></i>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="conn-select">Selecione o termo para criar conexão:</label>
+          <select class="form-select" id="conn-select">
+            <!-- Dynamically populated options -->
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="cancel-conn-btn">Cancelar</button>
+        <button class="btn-primary" id="save-conn-btn">Adicionar Conexão</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Glossary & Scripts -->
+  <script src="dictionary.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

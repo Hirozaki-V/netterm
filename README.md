@@ -30,13 +30,13 @@ Sem instalação necessária! É uma aplicação pura HTML/CSS/JavaScript.
 3. Comece a adicionar termos!
 
 ```bash
-git clone https://github.com/Hirozaki-V/netterm.git
-cd netterm
+git clone https://github.com/Hirozaki-V/studyflow.git
+cd studyflow
 # Abra index.html no seu navegador
 ```
 
 ### Opção 2: GitHub Pages
-Acesse diretamente em: **https://hirozaki-v.github.io/netterm**
+Acesse diretamente em: **https://hirozaki-v.github.io/studyflow**
 
 ---
 

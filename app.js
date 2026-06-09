@@ -643,6 +643,15 @@ async function processDumpInput() {
   showToast(`Processando ${rawTerms.length} termo(s)...`);
 
   for (let termText of rawTerms) {
+    // Parse term and potential context (e.g. "Word (Office)" or "Word: Office")
+    const match = termText.match(/^([^(:\n]+)(?:\(([^)]+)\)|:([^\n]+))?$/);
+    let cleanTerm = termText;
+    let context = "";
+    if (match) {
+      cleanTerm = match[1].trim();
+      context = (match[2] || match[3] || "").trim();
+    }
+
     const slug = termText.toLowerCase().replace(/[^a-z0-9à-ú\s/-]/gi, '').trim();
     if (!slug) continue;
     
@@ -653,7 +662,7 @@ async function processDumpInput() {
 
     // Set temp loading term state
     state.terms[slug] = {
-      term: termText,
+      term: cleanTerm,
       definition: "Processando informações...",
       category: "custom",
       connections: [],
@@ -665,13 +674,13 @@ async function processDumpInput() {
     };
     renderTermsGrid();
 
-    // Check BUILTIN Glossary first
-    const cleanLookup = slug.replace(/-/g, ' ');
+    // Check BUILTIN Glossary first (using cleanTerm slug)
+    const cleanSlug = cleanTerm.toLowerCase().replace(/[^a-z0-9à-ú\s/-]/gi, '').trim();
+    const cleanLookup = cleanSlug.replace(/-/g, ' ');
     let matchedKey = null;
     
-    // Direct matches or key includes matches
-    if (BUILTIN_DICTIONARY[slug]) {
-      matchedKey = slug;
+    if (BUILTIN_DICTIONARY[cleanSlug]) {
+      matchedKey = cleanSlug;
     } else {
       matchedKey = Object.keys(BUILTIN_DICTIONARY).find(key => 
         key === cleanLookup || cleanLookup.includes(key) || key.includes(cleanLookup)
@@ -704,12 +713,12 @@ async function processDumpInput() {
       saveData();
       renderTermsGrid();
     } else if (state.geminiApiKey.trim() !== "") {
-      // API Gemini Call
+      // API Gemini Call with context!
       try {
-        const aiResult = await fetchGeminiSummary(termText);
+        const aiResult = await fetchGeminiSummary(cleanTerm, context);
         if (aiResult) {
           state.terms[slug] = {
-            term: aiResult.term || termText,
+            term: aiResult.term || cleanTerm,
             definition: aiResult.definition || "Sem definição disponível.",
             category: aiResult.category || "custom",
             connections: [],
@@ -741,9 +750,8 @@ async function processDumpInput() {
         }
       } catch (err) {
         console.error("Gemini API Error", err);
-        // Fallback to manual card edit prompt
         state.terms[slug] = {
-          term: termText,
+          term: cleanTerm,
           definition: "Não foi possível resumir online. Clique em 'Editar Significado' para escrever o resumo você mesmo.",
           category: "custom",
           connections: [],
@@ -754,12 +762,12 @@ async function processDumpInput() {
         };
         saveData();
         renderTermsGrid();
-        showToast(`Erro na API ao resumir "${termText}". Modo Local Ativado.`, true);
+        showToast(`Erro na API ao resumir "${cleanTerm}". Modo Local Ativado.`, true);
       }
     } else {
       // Local default for custom unknown words
       state.terms[slug] = {
-        term: termText,
+        term: cleanTerm,
         definition: "Definição não cadastrada no dicionário offline. Clique em 'Editar Significado' para resumir.",
         category: "custom",
         connections: [],
@@ -768,7 +776,6 @@ async function processDumpInput() {
         y: Math.random() * 250 + 80,
         createdAt: Date.now()
       };
-      // Don't save/render per-term here; batch at the end
     }
   }
 
@@ -779,13 +786,18 @@ async function processDumpInput() {
 }
 
 // Fetch summaries directly from client-side Gemini API
-async function fetchGeminiSummary(term) {
+async function fetchGeminiSummary(term, context = "") {
   const apiKey = state.geminiApiKey.trim();
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   
-  const systemPrompt = `Você é um tutor didático multidisciplinar, especialista em diversas áreas do conhecimento.
-  Crie um resumo explicativo simplificado porém cientificamente correto sobre o termo/conceito: "${term}".
-  ATENÇÃO IMPORTANTE SOBRE O IDIOMA: O valor da chave "term" no JSON de resposta deve ser EXATAMENTE o termo solicitado ("${term}"), respeitando o idioma original e grafia enviados pelo usuário (por exemplo, se o usuário enviar "Word" ou "Kernel", o valor de "term" deve ser exatamente "Word" ou "Kernel", nunca traduzido para "Palavra" ou "Núcleo"). Se o termo for estrangeiro, você deve explicar a tradução em português exclusivamente dentro do campo "definition".
+  let systemPrompt = `Você é um tutor didático multidisciplinar, especialista em diversas áreas do conhecimento.
+  Crie um resumo explicativo simplificado porém cientificamente correto sobre o termo/conceito: "${term}".`;
+  
+  if (context.trim() !== "") {
+    systemPrompt += `\nUSE ESTE CONTEXTO/DICA PARA DIRECIONAR A EXPLICAÇÃO: "${context.trim()}". Por exemplo, se o termo for ambíguo, explique especificamente com base neste significado.`;
+  }
+  
+  systemPrompt += `\nATENÇÃO IMPORTANTE SOBRE O IDIOMA: O valor da chave "term" no JSON de resposta deve ser EXATAMENTE o termo solicitado ("${term}"), respeitando o idioma original e grafia enviados pelo usuário (por exemplo, se o usuário enviar "Word" ou "Kernel", o valor de "term" deve ser exatamente "Word" ou "Kernel", nunca traduzido para "Palavra" ou "Núcleo"). Se o termo for estrangeiro, você deve explicar a tradução em português exclusivamente dentro do campo "definition".
   Classifique o termo em apenas uma destas categorias aceitas: "ciencias", "humanas", "exatas", "linguagens", "tecnologia", "custom".
   Forneça uma lista de até 3 palavras-chave/termos minúsculos fortemente relacionados.
   A resposta DEVE ser estritamente em formato JSON válido, respeitando o seguinte esquema de chaves:
@@ -1042,6 +1054,9 @@ async function regenerateTermWithAi() {
   }
   
   const originalTerm = state.terms[key].term;
+  const context = prompt("Deseja fornecer algum contexto ou dica para guiar o Gemini? (Ex: 'ferramenta de office', 'em biologia', 'tecnologia', etc.)\nDeixe em branco para busca geral.", "");
+  if (context === null) return; // User cancelled
+  
   showToast(`Consultando Gemini para "${originalTerm}"...`);
   
   state.terms[key].definition = "Consultando inteligência artificial do Gemini... Aguarde.";
@@ -1049,7 +1064,7 @@ async function regenerateTermWithAi() {
   renderTermsGrid();
   
   try {
-    const aiResult = await fetchGeminiSummary(originalTerm);
+    const aiResult = await fetchGeminiSummary(originalTerm, context);
     if (aiResult) {
       state.terms[key].term = aiResult.term || originalTerm;
       state.terms[key].definition = aiResult.definition || "Sem definição disponível.";

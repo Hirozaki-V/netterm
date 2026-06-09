@@ -54,6 +54,79 @@ function debounce(fn, delay) {
   };
 }
 
+// Custom modal helpers for confirms and prompts
+function showCustomConfirm(title, message, isDanger = false) {
+  return new Promise((resolve) => {
+    elements.confirmModalTitle.innerHTML = title;
+    elements.confirmModalMessage.innerHTML = message;
+    
+    if (isDanger) {
+      elements.confirmConfirmBtn.className = "btn-primary btn-danger";
+    } else {
+      elements.confirmConfirmBtn.className = "btn-primary";
+    }
+    
+    const onConfirm = () => {
+      cleanup();
+      resolve(true);
+    };
+    const onCancel = () => {
+      cleanup();
+      resolve(false);
+    };
+    
+    function cleanup() {
+      elements.confirmConfirmBtn.removeEventListener("click", onConfirm);
+      elements.confirmCancelBtn.removeEventListener("click", onCancel);
+      elements.closeConfirmModalBtn.removeEventListener("click", onCancel);
+      elements.confirmModal.classList.remove("open");
+    }
+    
+    elements.confirmConfirmBtn.addEventListener("click", onConfirm);
+    elements.confirmCancelBtn.addEventListener("click", onCancel);
+    elements.closeConfirmModalBtn.addEventListener("click", onCancel);
+    
+    elements.confirmModal.classList.add("open");
+  });
+}
+
+function showCustomPrompt(title, label, placeholder = "") {
+  return new Promise((resolve) => {
+    elements.promptModalTitle.innerHTML = title;
+    elements.promptModalLabel.innerHTML = label;
+    elements.promptModalInput.value = "";
+    elements.promptModalInput.placeholder = placeholder;
+    
+    const onConfirm = () => {
+      const val = elements.promptModalInput.value.trim();
+      cleanup();
+      resolve(val);
+    };
+    const onCancel = () => {
+      cleanup();
+      resolve(null);
+    };
+    
+    function cleanup() {
+      elements.promptConfirmBtn.removeEventListener("click", onConfirm);
+      elements.promptCancelBtn.removeEventListener("click", onCancel);
+      elements.closePromptModalBtn.removeEventListener("click", onCancel);
+      elements.promptModal.classList.remove("open");
+    }
+    
+    elements.promptConfirmBtn.addEventListener("click", onConfirm);
+    elements.promptCancelBtn.addEventListener("click", onCancel);
+    elements.closePromptModalBtn.addEventListener("click", onCancel);
+    
+    elements.promptModal.classList.add("open");
+    
+    // Auto-focus input after transition
+    setTimeout(() => {
+      elements.promptModalInput.focus();
+    }, 150);
+  });
+}
+
 // Initial Sample Terms (loaded if LocalStorage is empty)
 const SAMPLE_TERMS_KEYS = ["fotossintese", "celula", "dna", "democracia", "algoritmo", "metafora", "inteligencia artificial", "energia"];
 
@@ -127,6 +200,22 @@ const elements = {
   mmDetailNotes: document.getElementById("mm-detail-notes"),
   mmDetailStudyBtn: document.getElementById("mm-detail-study-btn"),
   
+  // Custom Modals
+  confirmModal: document.getElementById("confirm-modal"),
+  closeConfirmModalBtn: document.getElementById("close-confirm-modal-btn"),
+  confirmModalTitle: document.getElementById("confirm-modal-title"),
+  confirmModalMessage: document.getElementById("confirm-modal-message"),
+  confirmConfirmBtn: document.getElementById("confirm-confirm-btn"),
+  confirmCancelBtn: document.getElementById("confirm-cancel-btn"),
+  
+  promptModal: document.getElementById("prompt-modal"),
+  closePromptModalBtn: document.getElementById("close-prompt-modal-btn"),
+  promptModalTitle: document.getElementById("prompt-modal-title"),
+  promptModalLabel: document.getElementById("prompt-modal-label"),
+  promptModalInput: document.getElementById("prompt-modal-input"),
+  promptConfirmBtn: document.getElementById("prompt-confirm-btn"),
+  promptCancelBtn: document.getElementById("prompt-cancel-btn"),
+
   // Modals
   settingsModal: document.getElementById("settings-modal"),
   closeSettingsBtn: document.getElementById("close-settings-btn"),
@@ -311,8 +400,13 @@ function setupEventListeners() {
   });
 
   // Clear DB
-  elements.clearDbBtn.addEventListener("click", () => {
-    if (confirm("ATENÇÃO: Isso apagará TODOS os seus termos cadastrados! Deseja continuar?")) {
+  elements.clearDbBtn.addEventListener("click", async () => {
+    const confirmed = await showCustomConfirm(
+      `<i class="fa-solid fa-triangle-exclamation" style="color: var(--accent-pink);"></i> Limpar Banco de Dados`,
+      "ATENÇÃO: Isso apagará TODOS os seus termos cadastrados! Deseja continuar?",
+      true
+    );
+    if (confirmed) {
       state.terms = {};
       saveData();
       renderTermsGrid();
@@ -396,11 +490,16 @@ function setupEventListeners() {
   });
 
   // Delete Term
-  elements.deleteTermBtn.addEventListener("click", () => {
+  elements.deleteTermBtn.addEventListener("click", async () => {
     const key = state.selectedTermKey;
     if (!key) return;
     
-    if (confirm(`Tem certeza que deseja remover o termo "${state.terms[key].term}"?`)) {
+    const confirmed = await showCustomConfirm(
+      `<i class="fa-solid fa-trash-can" style="color: var(--accent-pink);"></i> Excluir Termo`,
+      `Tem certeza que deseja remover o termo "${state.terms[key].term}"?`,
+      true
+    );
+    if (confirmed) {
       // Remove from connections references in other terms
       Object.keys(state.terms).forEach(otherKey => {
         if (Array.isArray(state.terms[otherKey].connections)) {
@@ -481,8 +580,13 @@ function setupEventListeners() {
     showToast("Mapa mental reorganizado em círculo.");
   });
 
-  elements.mmClearLinksBtn.addEventListener("click", () => {
-    if (confirm("Deseja apagar todas as conexões entre termos? Isso não apagará os termos em si.")) {
+  elements.mmClearLinksBtn.addEventListener("click", async () => {
+    const confirmed = await showCustomConfirm(
+      `<i class="fa-solid fa-link-slash" style="color: var(--accent-pink);"></i> Limpar Conexões`,
+      "Deseja apagar todas as conexões entre termos? Isso não apagará os termos em si.",
+      true
+    );
+    if (confirmed) {
       Object.keys(state.terms).forEach(k => {
         state.terms[k].connections = [];
       });
@@ -943,8 +1047,13 @@ function renderTermsGrid() {
 }
 
 // Global functions for inline actions inside cards
-window.deleteCard = function(key) {
-  if (confirm(`Excluir o termo "${state.terms[key].term}"?`)) {
+window.deleteCard = async function(key) {
+  const confirmed = await showCustomConfirm(
+    `<i class="fa-solid fa-trash-can" style="color: var(--accent-pink);"></i> Excluir Termo`,
+    `Excluir o termo "${state.terms[key].term}"?`,
+    true
+  );
+  if (confirmed) {
     Object.keys(state.terms).forEach(otherKey => {
       if (Array.isArray(state.terms[otherKey].connections)) {
         state.terms[otherKey].connections = state.terms[otherKey].connections.filter(c => c !== key);
@@ -1054,7 +1163,11 @@ async function regenerateTermWithAi() {
   }
   
   const originalTerm = state.terms[key].term;
-  const context = prompt("Deseja fornecer algum contexto ou dica para guiar o Gemini? (Ex: 'ferramenta de office', 'em biologia', 'tecnologia', etc.)\nDeixe em branco para busca geral.", "");
+  const context = await showCustomPrompt(
+    `<i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-cyan);"></i> Dica para a IA`,
+    `Deseja fornecer algum contexto ou dica para guiar o Gemini sobre <strong>"${originalTerm}"</strong>? (Ex: 'ferramenta de office', 'em biologia', 'tecnologia', etc.)`,
+    "Deixe em branco para busca geral..."
+  );
   if (context === null) return; // User cancelled
   
   showToast(`Consultando Gemini para "${originalTerm}"...`);

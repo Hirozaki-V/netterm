@@ -433,6 +433,43 @@
     </div>
   </div>
 
+  <!-- Custom Confirm Modal -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="confirm-modal-title"><i class="fa-solid fa-circle-question" style="color: var(--accent-cyan);"></i> Confirmação</h3>
+        <i class="fa-solid fa-xmark close-btn" id="close-confirm-modal-btn"></i>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-modal-message" style="line-height: 1.5; color: var(--text-secondary);"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="confirm-cancel-btn">Cancelar</button>
+        <button class="btn-primary" id="confirm-confirm-btn">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Prompt Modal -->
+  <div class="modal-overlay" id="prompt-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" id="prompt-modal-title"><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-cyan);"></i> Dica para a IA</h3>
+        <i class="fa-solid fa-xmark close-btn" id="close-prompt-modal-btn"></i>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label" for="prompt-modal-input" id="prompt-modal-label">Digite um contexto:</label>
+          <input type="text" class="form-input" id="prompt-modal-input" placeholder="...">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="prompt-cancel-btn">Cancelar</button>
+        <button class="btn-primary" id="prompt-confirm-btn">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Glossary & Scripts -->
   <script src="dictionary.js"></script>
   <script src="app.js"></script>

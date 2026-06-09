@@ -66,6 +66,9 @@
       </div>
     </aside>
 
+    <!-- Sidebar overlay backdrop for mobile -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
     <!-- Main Workspace -->
     <main>
       
@@ -320,7 +323,7 @@
   </div>
 
   <!-- Settings Modal -->
-  <div class="modal-overlay" id="settings-modal">
+  <div class="modal-overlay" id="settings-modal" role="dialog" aria-modal="true">
     <div class="modal">
       <div class="modal-header">
         <h3 class="modal-title"><i class="fa-solid fa-sliders"></i> Configurações do StudyFlow</h3>
@@ -375,7 +378,7 @@
   </div>
 
   <!-- Edit Definition Modal -->
-  <div class="modal-overlay" id="edit-def-modal">
+  <div class="modal-overlay" id="edit-def-modal" role="dialog" aria-modal="true">
     <div class="modal">
       <div class="modal-header">
         <h3 class="modal-title"><i class="fa-solid fa-pen-to-square"></i> Editar Significado</h3>
@@ -412,7 +415,7 @@
   </div>
 
   <!-- Dynamic link modal/dialog -->
-  <div class="modal-overlay" id="add-conn-modal">
+  <div class="modal-overlay" id="add-conn-modal" role="dialog" aria-modal="true">
     <div class="modal">
       <div class="modal-header">
         <h3 class="modal-title"><i class="fa-solid fa-link"></i> Conectar Termo</h3>
@@ -434,7 +437,7 @@
   </div>
 
   <!-- Custom Confirm Modal -->
-  <div class="modal-overlay" id="confirm-modal">
+  <div class="modal-overlay" id="confirm-modal" role="dialog" aria-modal="true">
     <div class="modal">
       <div class="modal-header">
         <h3 class="modal-title" id="confirm-modal-title"><i class="fa-solid fa-circle-question" style="color: var(--accent-cyan);"></i> Confirmação</h3>
@@ -451,7 +454,7 @@
   </div>
 
   <!-- Custom Prompt Modal -->
-  <div class="modal-overlay" id="prompt-modal">
+  <div class="modal-overlay" id="prompt-modal" role="dialog" aria-modal="true">
     <div class="modal">
       <div class="modal-header">
         <h3 class="modal-title" id="prompt-modal-title"><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-cyan);"></i> Dica para a IA</h3>

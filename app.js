@@ -37,6 +37,19 @@ let state = {
 // Toast timeout reference for cancellation
 let toastTimeoutId = null;
 
+// Modal concurrency guard
+let _modalOpen = false;
+
+// Shared category color map (DRY — used in detail panels)
+const CATEGORY_COLORS = {
+  "ciencias": { color: "var(--accent-green)", bg: "rgba(16, 185, 129, 0.1)" },
+  "humanas": { color: "var(--accent-purple)", bg: "rgba(139, 92, 246, 0.1)" },
+  "exatas": { color: "var(--accent-blue)", bg: "rgba(79, 172, 254, 0.1)" },
+  "linguagens": { color: "var(--accent-pink)", bg: "rgba(236, 72, 153, 0.1)" },
+  "tecnologia": { color: "var(--accent-cyan)", bg: "rgba(0, 242, 254, 0.1)" },
+  "custom": { color: "var(--accent-orange)", bg: "rgba(245, 158, 11, 0.1)" }
+};
+
 // Utility: Escape HTML to prevent XSS
 function escapeHTML(str) {
   if (typeof str !== 'string') return '';
@@ -54,8 +67,43 @@ function debounce(fn, delay) {
   };
 }
 
+// P7: Focus trap utility for modals (accessibility)
+function trapFocus(modalElement) {
+  const focusableSelectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+  const focusableElements = modalElement.querySelectorAll(focusableSelectors);
+  if (focusableElements.length === 0) return () => {};
+
+  const firstFocusable = focusableElements[0];
+  const lastFocusable = focusableElements[focusableElements.length - 1];
+
+  function handler(e) {
+    if (e.key !== 'Tab') return;
+    if (e.shiftKey) {
+      if (document.activeElement === firstFocusable) {
+        e.preventDefault();
+        lastFocusable.focus();
+      }
+    } else {
+      if (document.activeElement === lastFocusable) {
+        e.preventDefault();
+        firstFocusable.focus();
+      }
+    }
+  }
+
+  modalElement.addEventListener('keydown', handler);
+  // Focus the first focusable element
+  setTimeout(() => firstFocusable.focus(), 100);
+  // Return cleanup function
+  return () => modalElement.removeEventListener('keydown', handler);
+}
+
 // Custom modal helpers for confirms and prompts
 function showCustomConfirm(title, message, isDanger = false) {
+  // Guard: prevent concurrent modals
+  if (_modalOpen) return Promise.resolve(false);
+  _modalOpen = true;
+
   return new Promise((resolve) => {
     elements.confirmModalTitle.innerHTML = title;
     elements.confirmModalMessage.innerHTML = message;
@@ -74,23 +122,36 @@ function showCustomConfirm(title, message, isDanger = false) {
       cleanup();
       resolve(false);
     };
+    const onKeydown = (e) => {
+      if (e.key === "Escape") onCancel();
+    };
     
+    let releaseFocusTrap;
     function cleanup() {
       elements.confirmConfirmBtn.removeEventListener("click", onConfirm);
       elements.confirmCancelBtn.removeEventListener("click", onCancel);
       elements.closeConfirmModalBtn.removeEventListener("click", onCancel);
+      document.removeEventListener("keydown", onKeydown);
+      if (releaseFocusTrap) releaseFocusTrap();
       elements.confirmModal.classList.remove("open");
+      _modalOpen = false;
     }
     
     elements.confirmConfirmBtn.addEventListener("click", onConfirm);
     elements.confirmCancelBtn.addEventListener("click", onCancel);
     elements.closeConfirmModalBtn.addEventListener("click", onCancel);
+    document.addEventListener("keydown", onKeydown);
     
     elements.confirmModal.classList.add("open");
+    releaseFocusTrap = trapFocus(elements.confirmModal);
   });
 }
 
 function showCustomPrompt(title, label, placeholder = "") {
+  // Guard: prevent concurrent modals
+  if (_modalOpen) return Promise.resolve(null);
+  _modalOpen = true;
+
   return new Promise((resolve) => {
     elements.promptModalTitle.innerHTML = title;
     elements.promptModalLabel.innerHTML = label;
@@ -106,19 +167,34 @@ function showCustomPrompt(title, label, placeholder = "") {
       cleanup();
       resolve(null);
     };
+    const onKeydown = (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        onConfirm();
+      }
+      if (e.key === "Escape") {
+        onCancel();
+      }
+    };
     
+    let releaseFocusTrap;
     function cleanup() {
       elements.promptConfirmBtn.removeEventListener("click", onConfirm);
       elements.promptCancelBtn.removeEventListener("click", onCancel);
       elements.closePromptModalBtn.removeEventListener("click", onCancel);
+      elements.promptModalInput.removeEventListener("keydown", onKeydown);
+      if (releaseFocusTrap) releaseFocusTrap();
       elements.promptModal.classList.remove("open");
+      _modalOpen = false;
     }
     
     elements.promptConfirmBtn.addEventListener("click", onConfirm);
     elements.promptCancelBtn.addEventListener("click", onCancel);
     elements.closePromptModalBtn.addEventListener("click", onCancel);
+    elements.promptModalInput.addEventListener("keydown", onKeydown);
     
     elements.promptModal.classList.add("open");
+    releaseFocusTrap = trapFocus(elements.promptModal);
     
     // Auto-focus input after transition
     setTimeout(() => {
@@ -248,6 +324,18 @@ window.addEventListener("DOMContentLoaded", () => {
   setupEventListeners();
   updateApiStatusUI();
   renderTermsGrid();
+
+  // M3: Close detail panel on mobile "Back" gesture
+  window.addEventListener("popstate", (e) => {
+    if (e.state && e.state.detailOpen) {
+      // Do nothing — we're going back to the detail-open state
+    } else {
+      if (elements.detailPanel.classList.contains("open")) {
+        elements.detailPanel.classList.remove("open");
+        state.selectedTermKey = null;
+      }
+    }
+  });
 });
 
 // Load state from LocalStorage
@@ -359,6 +447,13 @@ function setupEventListeners() {
   elements.importDbInput.addEventListener("change", (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    // S5: File size limit (10MB max) to prevent browser freeze
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_FILE_SIZE) {
+      showToast("Arquivo muito grande (máx 10MB).", true);
+      e.target.value = "";
+      return;
+    }
     const reader = new FileReader();
     reader.onload = function(evt) {
       try {
@@ -395,6 +490,8 @@ function setupEventListeners() {
       } catch (err) {
         showToast("Erro ao processar o arquivo JSON.", true);
       }
+      // B5 fix: reset input so re-importing the same file triggers 'change'
+      e.target.value = "";
     };
     reader.readAsText(file);
   });
@@ -489,31 +586,11 @@ function setupEventListeners() {
     showToast("Notas da aula salvas!");
   });
 
-  // Delete Term
-  elements.deleteTermBtn.addEventListener("click", async () => {
+  // Delete Term (uses unified deleteTerm)
+  elements.deleteTermBtn.addEventListener("click", () => {
     const key = state.selectedTermKey;
     if (!key) return;
-    
-    const confirmed = await showCustomConfirm(
-      `<i class="fa-solid fa-trash-can" style="color: var(--accent-pink);"></i> Excluir Termo`,
-      `Tem certeza que deseja remover o termo "${state.terms[key].term}"?`,
-      true
-    );
-    if (confirmed) {
-      // Remove from connections references in other terms
-      Object.keys(state.terms).forEach(otherKey => {
-        if (Array.isArray(state.terms[otherKey].connections)) {
-          state.terms[otherKey].connections = state.terms[otherKey].connections.filter(c => c !== key);
-        }
-      });
-      
-      delete state.terms[key];
-      saveData();
-      elements.detailPanel.classList.remove("open");
-      state.selectedTermKey = null;
-      renderTermsGrid();
-      showToast("Termo removido.");
-    }
+    deleteTerm(key);
   });
 
   // Connect terms modal
@@ -630,20 +707,40 @@ function setupEventListeners() {
   // SVG Pan / Drag / Click connection logic
   setupSvgHandlers();
 
-  // Mobile sidebar toggle
+  // Mobile sidebar toggle with backdrop
   const mobileToggle = document.getElementById("mobile-menu-toggle");
   const sidebar = document.querySelector(".app-sidebar-nav");
+  const sidebarBackdrop = document.getElementById("sidebar-backdrop");
+
+  function closeSidebar() {
+    if (sidebar) sidebar.classList.remove("open");
+    if (mobileToggle) mobileToggle.classList.remove("active");
+    if (sidebarBackdrop) sidebarBackdrop.classList.remove("visible");
+  }
+
+  function openSidebar() {
+    if (sidebar) sidebar.classList.add("open");
+    if (mobileToggle) mobileToggle.classList.add("active");
+    if (sidebarBackdrop) sidebarBackdrop.classList.add("visible");
+  }
+
   if (mobileToggle && sidebar) {
     mobileToggle.addEventListener("click", () => {
-      sidebar.classList.toggle("open");
-      mobileToggle.classList.toggle("active");
+      if (sidebar.classList.contains("open")) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
     });
+    // Close sidebar when tapping backdrop
+    if (sidebarBackdrop) {
+      sidebarBackdrop.addEventListener("click", closeSidebar);
+    }
     // Close sidebar when a nav item is clicked on mobile
     elements.navItems.forEach(item => {
       item.addEventListener("click", () => {
         if (window.innerWidth <= 1024) {
-          sidebar.classList.remove("open");
-          mobileToggle.classList.remove("active");
+          closeSidebar();
         }
       });
     });
@@ -814,7 +911,7 @@ async function processDumpInput() {
         }
       });
       
-      saveData();
+      // P2: saveData removed here — batch save at end of function
       renderTermsGrid();
     } else if (state.geminiApiKey.trim() !== "") {
       // API Gemini Call with context!
@@ -847,7 +944,7 @@ async function processDumpInput() {
             });
           }
           
-          saveData();
+          // P2: saveData removed here — batch save at end of function
           renderTermsGrid();
         } else {
           throw new Error("Empty Response");
@@ -864,7 +961,7 @@ async function processDumpInput() {
           y: Math.random() * 250 + 80,
           createdAt: Date.now()
         };
-        saveData();
+        // P2: saveData removed here — batch save at end of function
         renderTermsGrid();
         showToast(`Erro na API ao resumir "${cleanTerm}". Modo Local Ativado.`, true);
       }
@@ -986,7 +1083,7 @@ function renderTermsGrid() {
       <div class="empty-state">
         <i class="fa-solid fa-folder-open empty-icon"></i>
         <h4 class="empty-title">Nenhum termo por aqui!</h4>
-        <p class="empty-desc">Experimente digitar termos de rede na barra superior ou mude o filtro para visualizar outros cartões.</p>
+        <p class="empty-desc">Experimente digitar termos na barra superior ou mude o filtro para visualizar outros cartões.</p>
       </div>
     `;
     return;
@@ -1032,7 +1129,7 @@ function renderTermsGrid() {
     if (deleteBtn) {
       deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        deleteCard(key);
+        deleteTerm(key);
       });
     }
 
@@ -1046,11 +1143,13 @@ function renderTermsGrid() {
   });
 }
 
-// Global functions for inline actions inside cards
-window.deleteCard = async function(key) {
+// Unified term deletion (S1 XSS-safe, B3 null-check, R3 single source of truth)
+async function deleteTerm(key) {
+  if (!state.terms[key]) return; // B3: null-check
+  const termName = escapeHTML(state.terms[key].term); // S1: XSS-safe
   const confirmed = await showCustomConfirm(
     `<i class="fa-solid fa-trash-can" style="color: var(--accent-pink);"></i> Excluir Termo`,
-    `Excluir o termo "${state.terms[key].term}"?`,
+    `Excluir o termo "${termName}"?`,
     true
   );
   if (confirmed) {
@@ -1068,7 +1167,7 @@ window.deleteCard = async function(key) {
     renderTermsGrid();
     showToast("Termo removido.");
   }
-};
+}
 
 function getCategoryLabel(cat) {
   const dict = {
@@ -1097,16 +1196,8 @@ function openDetailPanel(key) {
   elements.detailCategory.innerText = getCategoryLabel(item.category);
   elements.detailCategory.className = `detail-category-badge`;
   
-  // Specific category styling
-  const catColors = {
-    "ciencias": { color: "var(--accent-green)", bg: "rgba(16, 185, 129, 0.1)" },
-    "humanas": { color: "var(--accent-purple)", bg: "rgba(139, 92, 246, 0.1)" },
-    "exatas": { color: "var(--accent-blue)", bg: "rgba(79, 172, 254, 0.1)" },
-    "linguagens": { color: "var(--accent-pink)", bg: "rgba(236, 72, 153, 0.1)" },
-    "tecnologia": { color: "var(--accent-cyan)", bg: "rgba(0, 242, 254, 0.1)" },
-    "custom": { color: "var(--accent-orange)", bg: "rgba(245, 158, 11, 0.1)" }
-  };
-  const catStyle = catColors[item.category] || catColors["custom"];
+  // Specific category styling (uses shared CATEGORY_COLORS constant)
+  const catStyle = CATEGORY_COLORS[item.category] || CATEGORY_COLORS["custom"];
   elements.detailCategory.style.color = catStyle.color;
   elements.detailCategory.style.background = catStyle.bg;
   elements.detailCategory.style.border = `1px solid ${catStyle.color}`;
@@ -1150,6 +1241,11 @@ function openDetailPanel(key) {
 
   // Open the panel
   elements.detailPanel.classList.add("open");
+
+  // M3: Push history state so mobile "Back" can close this panel
+  if (window.innerWidth <= 1024) {
+    history.pushState({ detailOpen: true }, "");
+  }
 }
 
 // Regenerate term using Gemini API
@@ -1242,7 +1338,7 @@ function openAddConnectionDialog() {
   elements.addConnModal.classList.add("open");
 }
 
-window.removeConnection = function(termA, termB) {
+function removeConnection(termA, termB) {
   if (state.terms[termA]) {
     state.terms[termA].connections = state.terms[termA].connections.filter(c => c !== termB);
   }
@@ -1252,7 +1348,7 @@ window.removeConnection = function(termA, termB) {
   saveData();
   openDetailPanel(termA);
   showToast("Conexão removida.");
-};
+}
 
 // ----------------------------------------------------
 // STUDY MODULE: FLASHCARDS
@@ -1449,9 +1545,12 @@ function renderQuizQuestion() {
         <i class="fa-solid fa-trophy" style="font-size: 3rem; color: var(--accent-cyan); margin-bottom: 1rem;"></i>
         <h3>Quiz Concluído!</h3>
         <p style="margin-top: 0.5rem; color: var(--text-secondary);">Você acertou <strong>${state.quiz.score}</strong> de <strong>${questionsCount}</strong> perguntas.</p>
-        <button class="btn-primary" onclick="initQuiz()" style="margin: 1.5rem auto 0 auto;">Jogar Novamente</button>
+        <button class="btn-primary" id="quiz-replay-btn" style="margin: 1.5rem auto 0 auto;">Jogar Novamente</button>
       </div>
     `;
+    // S2/R5: Use addEventListener instead of inline onclick
+    const replayBtn = document.getElementById("quiz-replay-btn");
+    if (replayBtn) replayBtn.addEventListener("click", initQuiz);
     elements.quizOptionsContainer.innerHTML = "";
     elements.quizNextBtn.style.display = "none";
     return;
@@ -1723,16 +1822,8 @@ function openMindmapDetail(key) {
   elements.mmDetailTitle.innerText = item.term;
   elements.mmDetailCategory.innerText = getCategoryLabel(item.category);
   
-  // Style category badge
-  const catColors = {
-    "ciencias": { color: "var(--accent-green)", bg: "rgba(16, 185, 129, 0.1)" },
-    "humanas": { color: "var(--accent-purple)", bg: "rgba(139, 92, 246, 0.1)" },
-    "exatas": { color: "var(--accent-blue)", bg: "rgba(79, 172, 254, 0.1)" },
-    "linguagens": { color: "var(--accent-pink)", bg: "rgba(236, 72, 153, 0.1)" },
-    "tecnologia": { color: "var(--accent-cyan)", bg: "rgba(0, 242, 254, 0.1)" },
-    "custom": { color: "var(--accent-orange)", bg: "rgba(245, 158, 11, 0.1)" }
-  };
-  const catStyle = catColors[item.category] || catColors["custom"];
+  // Style category badge (uses shared CATEGORY_COLORS constant)
+  const catStyle = CATEGORY_COLORS[item.category] || CATEGORY_COLORS["custom"];
   elements.mmDetailCategory.style.color = catStyle.color;
   elements.mmDetailCategory.style.background = catStyle.bg;
   elements.mmDetailCategory.style.border = `1px solid ${catStyle.color}`;
@@ -1746,16 +1837,77 @@ function openMindmapDetail(key) {
 
 function setupSvgHandlers() {
   let dragAnimFrameId = null;
+  let lastPinchDist = 0; // For pinch-to-zoom
+
+  // ── Helper: get SVG coordinates from client coords ──
+  function clientToSvg(clientX, clientY) {
+    const rect = elements.mindmapSvg.getBoundingClientRect();
+    const zoom = state.mindmap.zoom;
+    const pan = state.mindmap.pan;
+    return {
+      x: (clientX - rect.left - pan.x) / zoom,
+      y: (clientY - rect.top - pan.y) / zoom
+    };
+  }
+
+  // ── Helper: start dragging a node ──
+  function startNodeDrag(key, clientX, clientY) {
+    state.mindmap.draggedNodeId = key;
+    const svg = clientToSvg(clientX, clientY);
+    state.mindmap.dragOffset = {
+      x: svg.x - state.terms[key].x,
+      y: svg.y - state.terms[key].y
+    };
+  }
+
+  // ── Helper: move node to new client position ──
+  function moveNodeTo(clientX, clientY) {
+    const key = state.mindmap.draggedNodeId;
+    if (!key) return;
+    const svg = clientToSvg(clientX, clientY);
+    state.terms[key].x = Math.max(20, Math.min(1500, svg.x - state.mindmap.dragOffset.x));
+    state.terms[key].y = Math.max(20, Math.min(1000, svg.y - state.mindmap.dragOffset.y));
+    updateNodeSvgPosition(key);
+  }
+
+  // ── Helper: start panning ──
+  function startPan(clientX, clientY) {
+    state.mindmap.isPanning = true;
+    state.mindmap.panStart = {
+      x: clientX - state.mindmap.pan.x,
+      y: clientY - state.mindmap.pan.y
+    };
+    elements.mindmapSvg.style.cursor = "grabbing";
+  }
+
+  // ── Helper: update pan position ──
+  function updatePan(clientX, clientY) {
+    state.mindmap.pan = {
+      x: clientX - state.mindmap.panStart.x,
+      y: clientY - state.mindmap.panStart.y
+    };
+    applyViewportTransform();
+  }
+
+  // ── Helper: end all drag/pan operations ──
+  function endInteraction() {
+    if (state.mindmap.isPanning) {
+      state.mindmap.isPanning = false;
+      elements.mindmapSvg.style.cursor = "grab";
+    }
+    if (state.mindmap.draggedNodeId) {
+      state.mindmap.draggedNodeId = null;
+      saveData();
+    }
+    lastPinchDist = 0;
+  }
+
+  // ═══ MOUSE EVENTS ═══
 
   // Mouse Down on canvas background triggers panning
   elements.mindmapSvg.addEventListener("mousedown", (e) => {
     if (e.target === elements.mindmapSvg || e.target.id === "viewport-group" || e.target.tagName === "svg") {
-      state.mindmap.isPanning = true;
-      state.mindmap.panStart = {
-        x: e.clientX - state.mindmap.pan.x,
-        y: e.clientY - state.mindmap.pan.y
-      };
-      elements.mindmapSvg.style.cursor = "grabbing";
+      startPan(e.clientX, e.clientY);
     }
   });
 
@@ -1769,48 +1921,83 @@ function setupSvgHandlers() {
   // MouseMove for Dragging & Panning
   document.addEventListener("mousemove", (e) => {
     if (state.mindmap.isPanning) {
-      state.mindmap.pan = {
-        x: e.clientX - state.mindmap.panStart.x,
-        y: e.clientY - state.mindmap.panStart.y
-      };
-      applyViewportTransform();
+      updatePan(e.clientX, e.clientY);
     } else if (state.mindmap.draggedNodeId) {
       if (dragAnimFrameId) cancelAnimationFrame(dragAnimFrameId);
       dragAnimFrameId = requestAnimationFrame(() => {
-        const key = state.mindmap.draggedNodeId;
-        if (!key) return;
-        const rect = elements.mindmapSvg.getBoundingClientRect();
-        
-        const zoom = state.mindmap.zoom;
-        const pan = state.mindmap.pan;
-        
-        const mouseSvgX = (e.clientX - rect.left - pan.x) / zoom;
-        const mouseSvgY = (e.clientY - rect.top - pan.y) / zoom;
-        
-        const newX = mouseSvgX - state.mindmap.dragOffset.x;
-        const newY = mouseSvgY - state.mindmap.dragOffset.y;
-        
-        // Boundaries with some buffer
-        state.terms[key].x = Math.max(20, Math.min(1500, newX));
-        state.terms[key].y = Math.max(20, Math.min(1000, newY));
-        
-        updateNodeSvgPosition(key);
+        moveNodeTo(e.clientX, e.clientY);
         dragAnimFrameId = null;
       });
     }
   });
 
   // MouseUp terminates actions
-  document.addEventListener("mouseup", () => {
-    if (state.mindmap.isPanning) {
-      state.mindmap.isPanning = false;
-      elements.mindmapSvg.style.cursor = "grab";
+  document.addEventListener("mouseup", endInteraction);
+
+  // ═══ TOUCH EVENTS (M1 + M2) ═══
+
+  // Touch start — detect node drag vs canvas pan vs pinch-zoom
+  elements.mindmapSvg.addEventListener("touchstart", (e) => {
+    if (e.touches.length === 2) {
+      // M2: Pinch-to-zoom start
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      lastPinchDist = Math.sqrt(dx * dx + dy * dy);
+      return;
     }
-    if (state.mindmap.draggedNodeId) {
-      state.mindmap.draggedNodeId = null;
-      saveData();
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      // Check if touching a node
+      const nodeGroup = touch.target.closest(".mindmap-node");
+      if (nodeGroup) {
+        e.preventDefault();
+        const key = nodeGroup.getAttribute("data-id");
+        if (key) startNodeDrag(key, touch.clientX, touch.clientY);
+      } else if (touch.target === elements.mindmapSvg || touch.target.id === "viewport-group" || touch.target.closest("svg")) {
+        e.preventDefault();
+        startPan(touch.clientX, touch.clientY);
+      }
     }
+  }, { passive: false });
+
+  // Touch move — drag node, pan canvas, or pinch-zoom
+  elements.mindmapSvg.addEventListener("touchmove", (e) => {
+    if (e.touches.length === 2 && lastPinchDist > 0) {
+      // M2: Pinch-to-zoom
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const newDist = Math.sqrt(dx * dx + dy * dy);
+      if (lastPinchDist > 0) {
+        const factor = newDist / lastPinchDist;
+        adjustZoom(factor);
+      }
+      lastPinchDist = newDist;
+      return;
+    }
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      if (state.mindmap.isPanning) {
+        e.preventDefault();
+        updatePan(touch.clientX, touch.clientY);
+      } else if (state.mindmap.draggedNodeId) {
+        e.preventDefault();
+        if (dragAnimFrameId) cancelAnimationFrame(dragAnimFrameId);
+        dragAnimFrameId = requestAnimationFrame(() => {
+          moveNodeTo(touch.clientX, touch.clientY);
+          dragAnimFrameId = null;
+        });
+      }
+    }
+  }, { passive: false });
+
+  // Touch end — finalize
+  document.addEventListener("touchend", (e) => {
+    if (e.touches.length < 2) lastPinchDist = 0;
+    if (e.touches.length === 0) endInteraction();
   });
+  document.addEventListener("touchcancel", endInteraction);
 
   // Clicking empty SVG background clears selection & closes detail panel
   elements.mindmapSvg.addEventListener("click", (e) => {
@@ -1865,6 +2052,20 @@ function renderLinksRealtime(movedKey) {
   });
 }
 
+// P1: Optimized physics update — updates existing DOM positions without full re-render
+function updateAllNodePositions() {
+  const keys = Object.keys(state.terms);
+  keys.forEach(key => {
+    const node = state.terms[key];
+    const g = elements.nodesGroup.querySelector(`g[data-id="${key}"]`);
+    if (g) {
+      g.setAttribute("transform", `translate(${node.x}, ${node.y})`);
+    }
+  });
+  // Update all link positions
+  renderLinksRealtime();
+}
+
 function applyViewportTransform() {
   const pan = state.mindmap.pan;
   const zoom = state.mindmap.zoom;
@@ -1906,7 +2107,8 @@ function startPhysics() {
   function physicsLoop() {
     if (!state.mindmap.physicsEnabled) return;
     tickPhysics();
-    renderMindmap();
+    // P1: Update existing DOM positions instead of recreating all SVG elements
+    updateAllNodePositions();
     state.mindmap.animationFrameId = requestAnimationFrame(physicsLoop);
   }
 

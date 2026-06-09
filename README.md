@@ -13,7 +13,7 @@ StudyFlow é uma aplicação web interativa e premium para estudantes de qualque
 - **🤖 Resumos com IA (Gemini API)** — Conecte sua chave da API do Google Gemini para obter resumos gerados por IA de qualquer conceito
 - **🃏 Flashcards** — Revise seus termos com cartões 3D interativos de estudo
 - **🧠 Modo Quiz** — Teste seus conhecimentos com perguntas de múltipla escolha geradas automaticamente
-- **🕸️ Mapa Mental** — Visualize conexões entre termos em um grafo SVG interativo
+- **🕸️ Mapa de Conhecimento Dinâmico** — Visualize e conecte termos com física de gravidade, zoom/pan e sugestões inteligentes de relações geradas por IA
 - **💾 Offline / LocalStorage** — Tudo salvo localmente no navegador — sem conta ou servidor necessário
 - **📱 Totalmente Responsivo** — Funciona perfeitamente em desktop, tablet e celular
 - **🌙 Modo Escuro** — Design premium com glassmorphism inspirado em cyberpunk

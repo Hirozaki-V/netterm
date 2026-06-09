@@ -24,9 +24,13 @@ let state = {
     draggedNodeId: null,
     dragOffset: { x: 0, y: 0 },
     activeConnSource: null,
-    panOffset: { x: 0, y: 0 },
+    pan: { x: 0, y: 0 },
+    zoom: 1,
     isPanning: false,
-    panStart: { x: 0, y: 0 }
+    panStart: { x: 0, y: 0 },
+    physicsEnabled: false,
+    selectedNodeId: null,
+    animationFrameId: null
   }
 };
 
@@ -105,10 +109,23 @@ const elements = {
   
   // Mind Map
   mindmapSvg: document.getElementById("mindmap-svg"),
+  viewportGroup: document.getElementById("viewport-group"),
   linksGroup: document.getElementById("links-group"),
   nodesGroup: document.getElementById("nodes-group"),
   mmResetBtn: document.getElementById("mm-reset-btn"),
   mmClearLinksBtn: document.getElementById("mm-clear-links-btn"),
+  mmPhysicsBtn: document.getElementById("mm-physics-btn"),
+  mmAiSuggestBtn: document.getElementById("mm-ai-suggest-btn"),
+  mmZoomInBtn: document.getElementById("mm-zoom-in"),
+  mmZoomOutBtn: document.getElementById("mm-zoom-out"),
+  mmZoomResetBtn: document.getElementById("mm-zoom-reset"),
+  mmDetailPanel: document.getElementById("mm-detail-panel"),
+  closeMmDetailBtn: document.getElementById("close-mm-detail-btn"),
+  mmDetailTitle: document.getElementById("mm-detail-title"),
+  mmDetailCategory: document.getElementById("mm-detail-category"),
+  mmDetailDefinition: document.getElementById("mm-detail-definition"),
+  mmDetailNotes: document.getElementById("mm-detail-notes"),
+  mmDetailStudyBtn: document.getElementById("mm-detail-study-btn"),
   
   // Modals
   settingsModal: document.getElementById("settings-modal"),
@@ -461,7 +478,7 @@ function setupEventListeners() {
   elements.mmResetBtn.addEventListener("click", () => {
     arrangeMindmapNodesCircle();
     renderMindmap();
-    showToast("Mapa mental reorganizado.");
+    showToast("Mapa mental reorganizado em círculo.");
   });
 
   elements.mmClearLinksBtn.addEventListener("click", () => {
@@ -472,6 +489,37 @@ function setupEventListeners() {
       saveData();
       renderMindmap();
       showToast("Conexões limpas.");
+    }
+  });
+
+  elements.mmPhysicsBtn.addEventListener("click", () => {
+    togglePhysics();
+  });
+
+  elements.mmAiSuggestBtn.addEventListener("click", () => {
+    suggestConnectionsWithAi();
+  });
+
+  // Zoom controls
+  elements.mmZoomInBtn.addEventListener("click", () => adjustZoom(1.2));
+  elements.mmZoomOutBtn.addEventListener("click", () => adjustZoom(0.8));
+  elements.mmZoomResetBtn.addEventListener("click", () => resetZoomPan());
+
+  // Details panel controls
+  elements.closeMmDetailBtn.addEventListener("click", () => {
+    elements.mmDetailPanel.classList.remove("open");
+    state.mindmap.selectedNodeId = null;
+    renderMindmap();
+  });
+
+  elements.mmDetailStudyBtn.addEventListener("click", () => {
+    const key = state.mindmap.selectedNodeId;
+    if (!key) return;
+    switchTab("flashcards");
+    const idx = state.flashcards.cards.indexOf(key);
+    if (idx !== -1) {
+      state.flashcards.currentIndex = idx;
+      renderFlashcard();
     }
   });
 
@@ -501,6 +549,15 @@ function setupEventListeners() {
 // Switch between App Tabs
 function switchTab(tabId) {
   state.activeTab = tabId;
+  
+  // Clean up mindmap states when leaving the tab
+  if (tabId !== "mindmap") {
+    stopPhysics();
+    if (elements.mmDetailPanel) {
+      elements.mmDetailPanel.classList.remove("open");
+    }
+    state.mindmap.selectedNodeId = null;
+  }
   
   // Update nav UI
   elements.navItems.forEach(item => {
@@ -728,11 +785,12 @@ async function fetchGeminiSummary(term) {
   
   const systemPrompt = `Você é um tutor didático multidisciplinar, especialista em diversas áreas do conhecimento.
   Crie um resumo explicativo simplificado porém cientificamente correto sobre o termo/conceito: "${term}".
+  ATENÇÃO IMPORTANTE SOBRE O IDIOMA: O valor da chave "term" no JSON de resposta deve ser EXATAMENTE o termo solicitado ("${term}"), respeitando o idioma original e grafia enviados pelo usuário (por exemplo, se o usuário enviar "Word" ou "Kernel", o valor de "term" deve ser exatamente "Word" ou "Kernel", nunca traduzido para "Palavra" ou "Núcleo"). Se o termo for estrangeiro, você deve explicar a tradução em português exclusivamente dentro do campo "definition".
   Classifique o termo em apenas uma destas categorias aceitas: "ciencias", "humanas", "exatas", "linguagens", "tecnologia", "custom".
   Forneça uma lista de até 3 palavras-chave/termos minúsculos fortemente relacionados.
   A resposta DEVE ser estritamente em formato JSON válido, respeitando o seguinte esquema de chaves:
   {
-    "term": "Nome Formatado do Termo",
+    "term": "O mesmo termo original solicitado",
     "definition": "Sua explicação em português (limite de 3 parágrafos curtos, cerca de 80-120 palavras)",
     "category": "categoria-escolhida",
     "connections": ["termo-relacionado-1", "termo-relacionado-2"]
@@ -1330,9 +1388,17 @@ function handleQuizAnswer(idx, isCorrect, clickedBtn) {
 // ----------------------------------------------------
 
 function initMindmap() {
-  // Ensure default coordinates are set for new nodes
   arrangeCoordinatesIfEmpty();
+  
+  // Reset select and pan on init
+  if (elements.mmDetailPanel) {
+    elements.mmDetailPanel.classList.remove("open");
+  }
+  state.mindmap.selectedNodeId = null;
+  resetZoomPan();
+  
   renderMindmap();
+  stopPhysics();
 }
 
 function arrangeCoordinatesIfEmpty() {
@@ -1344,9 +1410,9 @@ function arrangeCoordinatesIfEmpty() {
     if (node.x === undefined || node.y === undefined) {
       // Spiral positioning from center
       const angle = idx * 0.75;
-      const radius = 40 + idx * 25;
-      node.x = 350 + Math.cos(angle) * radius;
-      node.y = 200 + Math.sin(angle) * radius;
+      const radius = 50 + idx * 20;
+      node.x = 400 + Math.cos(angle) * radius;
+      node.y = 250 + Math.sin(angle) * radius;
       changed = true;
     }
   });
@@ -1359,9 +1425,9 @@ function arrangeCoordinatesIfEmpty() {
 function arrangeMindmapNodesCircle() {
   const keys = Object.keys(state.terms);
   const count = keys.length;
-  const cx = 350;
-  const cy = 200;
-  const radius = Math.min(cx - 80, cy - 40, count * 15 + 80);
+  const cx = 400;
+  const cy = 250;
+  const radius = Math.min(cx - 100, cy - 80, count * 15 + 80);
 
   keys.forEach((key, idx) => {
     const angle = (idx / count) * 2 * Math.PI;
@@ -1369,6 +1435,7 @@ function arrangeMindmapNodesCircle() {
     state.terms[key].y = cy + Math.sin(angle) * radius;
   });
   saveData();
+  renderMindmap();
 }
 
 function renderMindmap() {
@@ -1379,6 +1446,7 @@ function renderMindmap() {
   if (keys.length === 0) return;
 
   const activeSrc = state.mindmap.activeConnSource;
+  const selectedNode = state.mindmap.selectedNodeId;
 
   // 1. Draw Connection Lines
   const drawnPairs = new Set();
@@ -1388,7 +1456,6 @@ function renderMindmap() {
       sourceNode.connections.forEach(destKey => {
         const destNode = state.terms[destKey];
         if (destNode) {
-          // Prevent drawing double lines for undirected graph representation
           const pairId = [sourceKey, destKey].sort().join("-");
           if (!drawnPairs.has(pairId)) {
             drawnPairs.add(pairId);
@@ -1399,10 +1466,7 @@ function renderMindmap() {
             line.setAttribute("y2", destNode.y);
             
             // Highlight connections if node is active
-            let isHighlighted = false;
-            if (activeSrc === sourceKey || activeSrc === destKey) {
-              isHighlighted = true;
-            }
+            let isHighlighted = (activeSrc === sourceKey || activeSrc === destKey || selectedNode === sourceKey || selectedNode === destKey);
             
             line.setAttribute("class", `mindmap-link ${isHighlighted ? 'highlighted' : ''}`);
             elements.linksGroup.appendChild(line);
@@ -1416,85 +1480,73 @@ function renderMindmap() {
   keys.forEach(key => {
     const node = state.terms[key];
     const nodeGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    nodeGroup.setAttribute("class", "mindmap-node");
+    
+    let gClass = "mindmap-node " + (node.category || "custom");
+    if (key === selectedNode) gClass += " selected";
+    if (key === activeSrc) gClass += " active-source";
+    
+    nodeGroup.setAttribute("class", gClass);
     nodeGroup.setAttribute("transform", `translate(${node.x}, ${node.y})`);
     nodeGroup.setAttribute("data-id", key);
 
-    // Color definitions per category
-    const catColors = {
-      "ciencias": "var(--accent-green)",
-      "humanas": "var(--accent-purple)",
-      "exatas": "var(--accent-blue)",
-      "linguagens": "var(--accent-pink)",
-      "tecnologia": "var(--accent-cyan)",
-      "custom": "var(--accent-orange)"
-    };
-    const color = catColors[node.category] || "var(--accent-orange)";
-
-    // Outer Circle for Active connecting indicator
-    const outerCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    outerCircle.setAttribute("r", activeSrc === key ? "32" : "25");
-    outerCircle.setAttribute("fill", "none");
-    outerCircle.setAttribute("stroke", color);
-    
-    if (activeSrc === key) {
-      outerCircle.setAttribute("stroke-width", "3");
-      outerCircle.setAttribute("stroke-dasharray", "4 2");
-      // Add pulsing animations style inline
-      const animate = document.createElementNS("http://www.w3.org/2000/svg", "animate");
-      animate.setAttribute("attributeName", "r");
-      animate.setAttribute("values", "28;34;28");
-      animate.setAttribute("dur", "1.5s");
-      animate.setAttribute("repeatCount", "indefinite");
-      outerCircle.appendChild(animate);
-    } else {
-      outerCircle.setAttribute("stroke-width", "2");
+    // Compute capsule text & layout
+    let displayName = node.term;
+    if (displayName.includes("(")) {
+      displayName = displayName.split("(")[0].trim();
+    }
+    if (displayName.length > 15) {
+      displayName = displayName.substring(0, 13) + "..";
     }
 
-    // Inner Solid Circle
-    const innerCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    innerCircle.setAttribute("r", "22");
-    innerCircle.setAttribute("fill", "#111322");
-    innerCircle.setAttribute("stroke", color);
-    innerCircle.setAttribute("stroke-width", "1");
+    const padX = 20;
+    const textWidth = Math.max(70, displayName.length * 7 + 10);
+    const rectW = textWidth + padX;
+    const rectH = 32;
+    const rectX = -rectW / 2;
+    const rectY = -rectH / 2;
+
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    rect.setAttribute("x", rectX);
+    rect.setAttribute("y", rectY);
+    rect.setAttribute("width", rectW);
+    rect.setAttribute("height", rectH);
 
     // Text Label
     const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
     text.setAttribute("dy", "4");
-    
-    // Truncate term if too long for map
-    let displayName = node.term;
-    if (displayName.includes("(")) {
-      // E.g., DNS (Domain Name System) -> DNS
-      displayName = displayName.split("(")[0].trim();
-    }
-    if (displayName.length > 8) {
-      displayName = displayName.substring(0, 7) + "..";
-    }
     text.textContent = displayName;
 
-    nodeGroup.appendChild(outerCircle);
-    nodeGroup.appendChild(innerCircle);
+    nodeGroup.appendChild(rect);
     nodeGroup.appendChild(text);
 
     // Event listeners for Drag & Drop
     nodeGroup.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return; // Only drag left-click
       e.stopPropagation();
       state.mindmap.draggedNodeId = key;
-      const rect = elements.mindmapSvg.getBoundingClientRect();
-      // Record offset within the node
+      
+      const rectBound = elements.mindmapSvg.getBoundingClientRect();
+      const zoom = state.mindmap.zoom;
+      const pan = state.mindmap.pan;
+      
+      const mouseSvgX = (e.clientX - rectBound.left - pan.x) / zoom;
+      const mouseSvgY = (e.clientY - rectBound.top - pan.y) / zoom;
+      
       state.mindmap.dragOffset = {
-        x: e.clientX - rect.left - node.x,
-        y: e.clientY - rect.top - node.y
+        x: mouseSvgX - node.x,
+        y: mouseSvgY - node.y
       };
     });
 
     nodeGroup.addEventListener("click", (e) => {
       e.stopPropagation();
-      handleMindmapNodeClick(key);
+      if (state.mindmap.activeConnSource !== null) {
+        handleMindmapNodeClick(key);
+      } else {
+        openMindmapDetail(key);
+      }
     });
 
-    // Double click to open Details drawer
     nodeGroup.addEventListener("dblclick", (e) => {
       e.stopPropagation();
       switchTab("dashboard");
@@ -1509,26 +1561,21 @@ function handleMindmapNodeClick(clickedKey) {
   const activeSrc = state.mindmap.activeConnSource;
   
   if (activeSrc === null) {
-    // Select this node as connection source
     state.mindmap.activeConnSource = clickedKey;
     showToast(`Conectando de "${state.terms[clickedKey].term}". Clique em outro termo para conectar/desconectar.`);
     renderMindmap();
   } else if (activeSrc === clickedKey) {
-    // Cancel action
     state.mindmap.activeConnSource = null;
     renderMindmap();
   } else {
-    // Connect Node A and Node B
     const sourceNode = state.terms[activeSrc];
     const destNode = state.terms[clickedKey];
     
     if (sourceNode.connections.includes(clickedKey)) {
-      // Disconnect
       sourceNode.connections = sourceNode.connections.filter(c => c !== clickedKey);
       destNode.connections = destNode.connections.filter(c => c !== activeSrc);
       showToast("Conexão removida.");
     } else {
-      // Connect
       sourceNode.connections.push(clickedKey);
       destNode.connections.push(activeSrc);
       showToast("Conexão criada!");
@@ -1540,45 +1587,111 @@ function handleMindmapNodeClick(clickedKey) {
   }
 }
 
+function openMindmapDetail(key) {
+  state.mindmap.selectedNodeId = key;
+  const item = state.terms[key];
+  if (!item) return;
+
+  elements.mmDetailTitle.innerText = item.term;
+  elements.mmDetailCategory.innerText = getCategoryLabel(item.category);
+  
+  // Style category badge
+  const catColors = {
+    "ciencias": { color: "var(--accent-green)", bg: "rgba(16, 185, 129, 0.1)" },
+    "humanas": { color: "var(--accent-purple)", bg: "rgba(139, 92, 246, 0.1)" },
+    "exatas": { color: "var(--accent-blue)", bg: "rgba(79, 172, 254, 0.1)" },
+    "linguagens": { color: "var(--accent-pink)", bg: "rgba(236, 72, 153, 0.1)" },
+    "tecnologia": { color: "var(--accent-cyan)", bg: "rgba(0, 242, 254, 0.1)" },
+    "custom": { color: "var(--accent-orange)", bg: "rgba(245, 158, 11, 0.1)" }
+  };
+  const catStyle = catColors[item.category] || catColors["custom"];
+  elements.mmDetailCategory.style.color = catStyle.color;
+  elements.mmDetailCategory.style.background = catStyle.bg;
+  elements.mmDetailCategory.style.border = `1px solid ${catStyle.color}`;
+
+  elements.mmDetailDefinition.innerText = item.definition;
+  elements.mmDetailNotes.innerText = item.notes ? item.notes : "Nenhuma anotação registrada neste termo.";
+  
+  elements.mmDetailPanel.classList.add("open");
+  renderMindmap();
+}
+
 function setupSvgHandlers() {
-  // Drag animation frame reference for throttling
   let dragAnimFrameId = null;
 
-  // MouseMove for Dragging (throttled with requestAnimationFrame)
+  // Mouse Down on canvas background triggers panning
+  elements.mindmapSvg.addEventListener("mousedown", (e) => {
+    if (e.target === elements.mindmapSvg || e.target.id === "viewport-group" || e.target.tagName === "svg") {
+      state.mindmap.isPanning = true;
+      state.mindmap.panStart = {
+        x: e.clientX - state.mindmap.pan.x,
+        y: e.clientY - state.mindmap.pan.y
+      };
+      elements.mindmapSvg.style.cursor = "grabbing";
+    }
+  });
+
+  // Mouse wheel zoom
+  elements.mindmapSvg.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+    adjustZoom(zoomFactor);
+  }, { passive: false });
+
+  // MouseMove for Dragging & Panning
   document.addEventListener("mousemove", (e) => {
-    if (state.mindmap.draggedNodeId) {
-      // Cancel previous pending frame to avoid stacking
+    if (state.mindmap.isPanning) {
+      state.mindmap.pan = {
+        x: e.clientX - state.mindmap.panStart.x,
+        y: e.clientY - state.mindmap.panStart.y
+      };
+      applyViewportTransform();
+    } else if (state.mindmap.draggedNodeId) {
       if (dragAnimFrameId) cancelAnimationFrame(dragAnimFrameId);
       dragAnimFrameId = requestAnimationFrame(() => {
         const key = state.mindmap.draggedNodeId;
         if (!key) return;
         const rect = elements.mindmapSvg.getBoundingClientRect();
-        const newX = e.clientX - rect.left - state.mindmap.dragOffset.x;
-        const newY = e.clientY - rect.top - state.mindmap.dragOffset.y;
         
-        // Constrain within visible svg viewport bounds
-        state.terms[key].x = Math.max(30, Math.min(rect.width - 30, newX));
-        state.terms[key].y = Math.max(30, Math.min(rect.height - 30, newY));
+        const zoom = state.mindmap.zoom;
+        const pan = state.mindmap.pan;
         
-        // Real-time update lines and node position
+        const mouseSvgX = (e.clientX - rect.left - pan.x) / zoom;
+        const mouseSvgY = (e.clientY - rect.top - pan.y) / zoom;
+        
+        const newX = mouseSvgX - state.mindmap.dragOffset.x;
+        const newY = mouseSvgY - state.mindmap.dragOffset.y;
+        
+        // Boundaries with some buffer
+        state.terms[key].x = Math.max(20, Math.min(1500, newX));
+        state.terms[key].y = Math.max(20, Math.min(1000, newY));
+        
         updateNodeSvgPosition(key);
         dragAnimFrameId = null;
       });
     }
   });
 
-  // MouseUp terminates drag
+  // MouseUp terminates actions
   document.addEventListener("mouseup", () => {
+    if (state.mindmap.isPanning) {
+      state.mindmap.isPanning = false;
+      elements.mindmapSvg.style.cursor = "grab";
+    }
     if (state.mindmap.draggedNodeId) {
       state.mindmap.draggedNodeId = null;
       saveData();
     }
   });
 
-  // Clicking empty SVG canvas cancels active connections selection
-  elements.mindmapSvg.addEventListener("click", () => {
-    if (state.mindmap.activeConnSource !== null) {
-      state.mindmap.activeConnSource = null;
+  // Clicking empty SVG background clears selection & closes detail panel
+  elements.mindmapSvg.addEventListener("click", (e) => {
+    if (e.target === elements.mindmapSvg || e.target.id === "viewport-group" || e.target.tagName === "svg") {
+      if (state.mindmap.activeConnSource !== null) {
+        state.mindmap.activeConnSource = null;
+      }
+      elements.mmDetailPanel.classList.remove("open");
+      state.mindmap.selectedNodeId = null;
       renderMindmap();
     }
   });
@@ -1586,14 +1699,10 @@ function setupSvgHandlers() {
 
 function updateNodeSvgPosition(key) {
   const node = state.terms[key];
-  
-  // Find node group element and translate
   const g = elements.nodesGroup.querySelector(`g[data-id="${key}"]`);
   if (g) {
     g.setAttribute("transform", `translate(${node.x}, ${node.y})`);
   }
-
-  // Redraw all connection lines (single call instead of redundant loop)
   renderLinksRealtime(key);
 }
 
@@ -1601,6 +1710,7 @@ function renderLinksRealtime(movedKey) {
   elements.linksGroup.innerHTML = "";
   const keys = Object.keys(state.terms);
   const activeSrc = state.mindmap.activeConnSource;
+  const selectedNode = state.mindmap.selectedNodeId;
   const drawnPairs = new Set();
 
   keys.forEach(sourceKey => {
@@ -1618,14 +1728,283 @@ function renderLinksRealtime(movedKey) {
           line.setAttribute("x2", destNode.x);
           line.setAttribute("y2", destNode.y);
           
-          let isHighlighted = false;
-          if (activeSrc === sourceKey || activeSrc === destKey) {
-            isHighlighted = true;
-          }
+          let isHighlighted = (activeSrc === sourceKey || activeSrc === destKey || selectedNode === sourceKey || selectedNode === destKey);
           line.setAttribute("class", `mindmap-link ${isHighlighted ? 'highlighted' : ''}`);
           elements.linksGroup.appendChild(line);
         }
       }
     });
   });
+}
+
+function applyViewportTransform() {
+  const pan = state.mindmap.pan;
+  const zoom = state.mindmap.zoom;
+  elements.viewportGroup.setAttribute("transform", `translate(${pan.x}, ${pan.y}) scale(${zoom})`);
+}
+
+function adjustZoom(factor) {
+  state.mindmap.zoom = Math.max(0.3, Math.min(3, state.mindmap.zoom * factor));
+  applyViewportTransform();
+}
+
+function resetZoomPan() {
+  state.mindmap.zoom = 1;
+  state.mindmap.pan = { x: 0, y: 0 };
+  applyViewportTransform();
+}
+
+function togglePhysics() {
+  if (state.mindmap.physicsEnabled) {
+    stopPhysics();
+  } else {
+    startPhysics();
+  }
+}
+
+function startPhysics() {
+  if (state.mindmap.animationFrameId) return;
+  
+  Object.keys(state.terms).forEach(key => {
+    const node = state.terms[key];
+    if (node.vx === undefined) node.vx = 0;
+    if (node.vy === undefined) node.vy = 0;
+  });
+
+  state.mindmap.physicsEnabled = true;
+  elements.mmPhysicsBtn.innerHTML = `<i class="fa-solid fa-wind" style="color: var(--accent-green);"></i> Física: Ativa`;
+  elements.mmPhysicsBtn.classList.add("active");
+
+  function physicsLoop() {
+    if (!state.mindmap.physicsEnabled) return;
+    tickPhysics();
+    renderMindmap();
+    state.mindmap.animationFrameId = requestAnimationFrame(physicsLoop);
+  }
+
+  state.mindmap.animationFrameId = requestAnimationFrame(physicsLoop);
+}
+
+function stopPhysics() {
+  state.mindmap.physicsEnabled = false;
+  if (state.mindmap.animationFrameId) {
+    cancelAnimationFrame(state.mindmap.animationFrameId);
+    state.mindmap.animationFrameId = null;
+  }
+  if (elements.mmPhysicsBtn) {
+    elements.mmPhysicsBtn.innerHTML = `<i class="fa-solid fa-wind"></i> Física: Desativada`;
+    elements.mmPhysicsBtn.classList.remove("active");
+  }
+  saveData();
+}
+
+function tickPhysics() {
+  const keys = Object.keys(state.terms);
+  const cx = 400;
+  const cy = 250;
+  
+  const forces = {};
+  keys.forEach(key => {
+    forces[key] = { fx: 0, fy: 0 };
+    const node = state.terms[key];
+    if (node.vx === undefined) node.vx = 0;
+    if (node.vy === undefined) node.vy = 0;
+  });
+
+  // 1. Repel nodes
+  for (let i = 0; i < keys.length; i++) {
+    for (let j = i + 1; j < keys.length; j++) {
+      const keyA = keys[i];
+      const keyB = keys[j];
+      const nodeA = state.terms[keyA];
+      const nodeB = state.terms[keyB];
+      
+      const dx = nodeB.x - nodeA.x;
+      const dy = nodeB.y - nodeA.y;
+      const distSq = dx * dx + dy * dy + 0.01;
+      const dist = Math.sqrt(distSq);
+      
+      if (dist < 280) {
+        const force = 1600 / distSq;
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+        
+        forces[keyA].fx -= fx;
+        forces[keyA].fy -= fy;
+        forces[keyB].fx += fx;
+        forces[keyB].fy += fy;
+      }
+    }
+  }
+
+  // 2. Attract connected nodes
+  const connectedPairs = new Set();
+  keys.forEach(keyA => {
+    const nodeA = state.terms[keyA];
+    if (!Array.isArray(nodeA.connections)) return;
+    nodeA.connections.forEach(keyB => {
+      const nodeB = state.terms[keyB];
+      if (!nodeB) return;
+      
+      const pairId = [keyA, keyB].sort().join("-");
+      if (connectedPairs.has(pairId)) return;
+      connectedPairs.add(pairId);
+      
+      const dx = nodeB.x - nodeA.x;
+      const dy = nodeB.y - nodeA.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) + 0.01;
+      
+      const restLength = 130;
+      const K_spring = 0.03;
+      const displacement = dist - restLength;
+      const force = displacement * K_spring;
+      
+      const fx = (dx / dist) * force;
+      const fy = (dy / dist) * force;
+      
+      forces[keyA].fx += fx;
+      forces[keyA].fy += fy;
+      forces[keyB].fx -= fx;
+      forces[keyB].fy -= fy;
+    });
+  });
+
+  // 3. Central gravity and movement update
+  keys.forEach(key => {
+    const node = state.terms[key];
+    
+    if (key === state.mindmap.draggedNodeId) {
+      node.vx = 0;
+      node.vy = 0;
+      return;
+    }
+    
+    const dx = cx - node.x;
+    const dy = cy - node.y;
+    forces[key].fx += dx * 0.01;
+    forces[key].fy += dy * 0.01;
+
+    node.vx = (node.vx + forces[key].fx) * 0.8;
+    node.vy = (node.vy + forces[key].fy) * 0.8;
+
+    node.x += node.vx;
+    node.y += node.vy;
+
+    // Boundary constraints
+    node.x = Math.max(30, Math.min(1000, node.x));
+    node.y = Math.max(30, Math.min(600, node.y));
+  });
+}
+
+async function suggestConnectionsWithAi() {
+  if (!state.geminiApiKey || state.geminiApiKey.trim() === "") {
+    showToast("Por favor, configure uma chave da API do Gemini nas configurações.", true);
+    return;
+  }
+
+  const keys = Object.keys(state.terms);
+  if (keys.length < 2) {
+    showToast("Adicione pelo menos 2 termos para gerar conexões.", true);
+    return;
+  }
+
+  showToast("IA analisando termos e sugerindo conexões...");
+  elements.mmAiSuggestBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="color: var(--accent-cyan);"></i> Conectando...`;
+  elements.mmAiSuggestBtn.disabled = true;
+
+  try {
+    const connections = await fetchAiConnections(keys);
+    if (connections && connections.length > 0) {
+      let addedCount = 0;
+      connections.forEach(([keyA, keyB]) => {
+        const nodeA = state.terms[keyA];
+        const nodeB = state.terms[keyB];
+        if (nodeA && nodeB && keyA !== keyB) {
+          if (!nodeA.connections.includes(keyB)) {
+            nodeA.connections.push(keyB);
+            addedCount++;
+          }
+          if (!nodeB.connections.includes(keyA)) {
+            nodeB.connections.push(keyA);
+          }
+        }
+      });
+      
+      saveData();
+      renderMindmap();
+      showToast(`IA gerou ${addedCount} nova(s) conexão(ões) de estudos!`);
+    } else {
+      showToast("A IA não encontrou novas conexões óbvias entre esses termos.");
+    }
+  } catch (err) {
+    console.error("AI connection suggest error:", err);
+    showToast("Erro ao conectar termos por IA: " + err.message, true);
+  } finally {
+    elements.mmAiSuggestBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-cyan);"></i> Conectar com IA`;
+    elements.mmAiSuggestBtn.disabled = false;
+  }
+}
+
+async function fetchAiConnections(keys) {
+  const apiKey = state.geminiApiKey.trim();
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  
+  const termsList = keys.map(k => `ID: "${k}" - Termo: "${state.terms[k].term}"`).join("\n");
+  
+  const systemPrompt = `Você é um tutor didático especialista em criar mapas mentais de aprendizado.
+  Abaixo está uma lista de termos de estudo atualmente salvos pelo estudante.
+  Seu objetivo é analisar os termos e sugerir quais deles possuem uma forte relação direta de aprendizado (ex: causa e efeito, parte-todo, conceito relacionado).
+  Retorne as relações sugeridas na forma de pares de IDs.
+  A resposta DEVE ser estritamente em formato JSON válido, respeitando o seguinte esquema de chaves:
+  {
+    "connections": [
+      ["id-termo-1", "id-termo-2"],
+      ["id-termo-3", "id-termo-4"]
+    ]
+  }
+  Sugira apenas relações que façam real sentido conceitual e limite a no máximo 1.5 vezes o número total de termos.
+  Retorne APENAS o JSON puro. Não englobe com blocos de marcação de markdown (como \`\`\`json).
+
+  Lista de Termos:
+  ${termsList}`;
+
+  const payload = {
+    contents: [{
+      parts: [{
+        text: systemPrompt
+      }]
+    }],
+    generationConfig: {
+      responseMimeType: "application/json"
+    }
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const responseData = await response.json();
+  try {
+    if (responseData.candidates && responseData.candidates[0] &&
+        responseData.candidates[0].content &&
+        responseData.candidates[0].content.parts &&
+        responseData.candidates[0].content.parts[0] &&
+        responseData.candidates[0].content.parts[0].text) {
+      const jsonText = responseData.candidates[0].content.parts[0].text.trim();
+      const parsed = JSON.parse(jsonText);
+      return parsed.connections || [];
+    }
+  } catch (parseErr) {
+    console.error("Failed to parse Gemini AI Connections response JSON:", parseErr);
+    throw new Error("Resposta da API em formato inválido.");
+  }
+  return [];
 }

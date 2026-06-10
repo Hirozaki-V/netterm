@@ -17,9 +17,8 @@ function Header() {
   const { geminiApiKey } = useContext(DataContext);
 
   const handleLogoClick = () => {
-    setActiveTab('dashboard');
+    setMobileMenuOpen(true);
     setSelectedTermKey(null);
-    setMobileMenuOpen(false);
     setSettingsOpen(false);
     setMobileDrawerOpen(false);
     setEditDefModalOpen(false);

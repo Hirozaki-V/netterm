@@ -36,8 +36,11 @@ function App() {
 
   const toastStyle = {
     position: 'fixed',
-    bottom: '2rem',
-    right: '2rem',
+    top: '2rem',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: 'max-content',
+    maxWidth: '90vw',
     padding: '0.75rem 1.5rem',
     borderRadius: '8px',
     fontSize: '0.9rem',

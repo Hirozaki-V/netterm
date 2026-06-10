@@ -189,3 +189,5 @@ const BUILTIN_DICTIONARY = {
     "connections": ["atomo", "fotossintese", "ecossistema"]
   }
 };
+
+export default BUILTIN_DICTIONARY;

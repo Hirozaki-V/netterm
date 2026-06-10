@@ -1,0 +1,239 @@
+﻿
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\_legacy\app.js
+  1:1  error  Parsing error: Unexpected character '´┐¢'
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\_legacy\app_utf8.js
+   361:11  error  'BUILTIN_DICTIONARY' is not defined                                      no-undef
+   363:17  error  'BUILTIN_DICTIONARY' is not defined                                      no-undef
+   364:23  error  'BUILTIN_DICTIONARY' is not defined                                      no-undef
+   365:21  error  'BUILTIN_DICTIONARY' is not defined                                      no-undef
+   366:28  error  'BUILTIN_DICTIONARY' is not defined                                      no-undef
+   490:16  error  'err' is defined but never used                                          no-unused-vars
+   881:9   error  The value assigned to 'matchedKey' is not used in subsequent statements  no-useless-assignment
+   883:9   error  'BUILTIN_DICTIONARY' is not defined                                      no-undef
+   886:32  error  'BUILTIN_DICTIONARY' is not defined                                      no-undef
+   893:28  error  'BUILTIN_DICTIONARY' is not defined                                      no-undef
+  1039:14  error  '_' is defined but never used                                            no-unused-vars
+  1039:17  error  Empty block statement                                                    no-empty
+  1057:5   error  There is no `cause` attached to the symptom error being thrown           preserve-caught-error
+  1583:43  error  'clickedBtn' is defined but never used                                   no-unused-vars
+  2024:30  error  'movedKey' is defined but never used                                     no-unused-vars
+  2337:5   error  There is no `cause` attached to the symptom error being thrown           preserve-caught-error
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\_legacy\dictionary.js
+  1:1  error  Parsing error: Unexpected character '´┐¢'
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\App.jsx
+  1:8  error  'React' is defined but never used  no-unused-vars
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\dashboard\Dashboard.jsx
+  1:8  error  'React' is defined but never used  no-unused-vars
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\dashboard\DetailPanel.jsx
+   1:8  error  'React' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+  27:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  25 |   useEffect(() => {
+  26 |     if (item) {
+> 27 |       setLocalNotes(item.notes || '');
+     |       ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  28 |     } else {
+  29 |       setLocalNotes('');
+  30 |     }  react-hooks/set-state-in-effect
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\dashboard\QuickDumpInput.jsx
+  1:8  error  'React' is defined but never used  no-unused-vars
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\dashboard\TermsGrid.jsx
+  1:8  error  'React' is defined but never used  no-unused-vars
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\flashcards\Flashcards.jsx
+   1:8  error  'React' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+  15:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  13 |   useEffect(() => {
+  14 |     if (activeTab === 'flashcards') {
+> 15 |       setIsFlipped(false);
+     |       ^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  16 |       setCurrentIndex(0);
+  17 |     }
+  18 |   }, [activeTab]);  react-hooks/set-state-in-effect
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\layout\Header.jsx
+  1:8  error  'React' is defined but never used  no-unused-vars
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\layout\Sidebar.jsx
+  1:8  error  'React' is defined but never used  no-unused-vars
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\mindmap\MindMap.jsx
+    1:8  error    'React' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          no-unused-vars
+   50:7  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  48 |   useEffect(() => {
+  49 |     if (activeTab === 'mindmap') {
+> 50 |       setSelectedNodeId(null);
+     |       ^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  51 |       setActiveConnSource(null);
+  52 |       setZoom(1);
+  53 |       setPan({ x: 0, y: 0 });                                      react-hooks/set-state-in-effect
+   54:7  error    Error: Cannot access variable before it is declared
+
+`arrangeCoordinatesIfEmpty` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+  52 |       setZoom(1);
+  53 |       setPan({ x: 0, y: 0 });
+> 54 |       arrangeCoordinatesIfEmpty();
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^ `arrangeCoordinatesIfEmpty` accessed before it is declared
+  55 |     } else {
+  56 |       setPhysicsEnabled(false);
+  57 |     }
+
+  59 |
+  60 |   // Arrange node coordinates if missing
+> 61 |   const arrangeCoordinatesIfEmpty = () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 62 |     const keys = Object.keys(terms);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 63 |     let changed = false;
+     ÔÇª
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 79 |     }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 80 |   };
+     | ^^^^^ `arrangeCoordinatesIfEmpty` is declared here
+  81 |
+  82 |   // Arrange in circle layout
+  83 |   const arrangeNodesCircle = () => {  react-hooks/immutability
+   58:6  warning  React Hook useEffect has a missing dependency: 'arrangeCoordinatesIfEmpty'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               react-hooks/exhaustive-deps
+  224:7  error    There is no `cause` attached to the symptom error being thrown                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             preserve-caught-error
+  549:6  warning  React Hook useEffect has a missing dependency: 'setTerms'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                react-hooks/exhaustive-deps
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\mindmap\MindMapDetailPanel.jsx
+  1:8  error  'React' is defined but never used  no-unused-vars
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\modals\AddConnectionModal.jsx
+   1:8  error    'React' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   no-unused-vars
+  25:7  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  23 |       );
+  24 |
+> 25 |       setEligibleTerms(eligible);
+     |       ^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  26 |
+  27 |       if (eligible.length > 0) {
+  28 |         setSelectedDestKey(eligible[0]);  react-hooks/set-state-in-effect
+  34:6  warning  React Hook useEffect has missing dependencies: 'setAddConnModalOpen' and 'showToast'. Either include them or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            react-hooks/exhaustive-deps
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\modals\ConfirmModal.jsx
+  1:8  error  'React' is defined but never used  no-unused-vars
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\modals\EditDefinitionModal.jsx
+   1:8  error  'React' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                no-unused-vars
+  22:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  20 |   useEffect(() => {
+  21 |     if (editDefModalOpen && item) {
+> 22 |       setLocalCategory(item.category || 'custom');
+     |       ^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  23 |       setLocalDefinition(item.definition || '');
+  24 |     }
+  25 |   }, [editDefModalOpen, item]);  react-hooks/set-state-in-effect
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\modals\FabButton.jsx
+  1:8  error  'React' is defined but never used  no-unused-vars
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\modals\MobileDrawer.jsx
+  1:8  error  'React' is defined but never used  no-unused-vars
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\modals\PromptModal.jsx
+   1:8  error  'React' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       no-unused-vars
+  14:7  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  12 |   useEffect(() => {
+  13 |     if (isOpen) {
+> 14 |       setInputValue('');
+     |       ^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  15 |       setTimeout(() => {
+  16 |         if (inputRef.current) {
+  17 |           inputRef.current.focus();  react-hooks/set-state-in-effect
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\modals\SettingsModal.jsx
+    1:8   error  'React' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                no-unused-vars
+   22:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  20 |   useEffect(() => {
+  21 |     if (settingsOpen) {
+> 22 |       setLocalKey(geminiApiKey);
+     |       ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  23 |     }
+  24 |   }, [settingsOpen, geminiApiKey]);
+  25 |  react-hooks/set-state-in-effect
+   46:14  error  'err' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+  104:16  error  'err' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  no-unused-vars
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\pomodoro\Pomodoro.jsx
+  1:8  error  'React' is defined but never used  no-unused-vars
+
+C:\Users\victo\OneDrive\Documents\SISTEMASPROJETOS\StudyFlow\src\components\quiz\Quiz.jsx
+   1:8  error    'React' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   no-unused-vars
+  83:7  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+  81 |   useEffect(() => {
+  82 |     if (activeTab === 'quiz') {
+> 83 |       handleStartQuiz();
+     |       ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  84 |     }
+  85 |   }, [activeTab]);
+  86 |  react-hooks/set-state-in-effect
+  85:6  warning  React Hook useEffect has a missing dependency: 'handleStartQuiz'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  react-hooks/exhaustive-deps
+
+Ô£û 53 problems (49 errors, 4 warnings)
+

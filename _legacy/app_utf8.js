@@ -1,4 +1,4 @@
-// State Management
+﻿// State Management
 let state = {
   terms: {},
   geminiApiKey: "",
@@ -40,7 +40,7 @@ let toastTimeoutId = null;
 // Modal concurrency guard
 let _modalOpen = false;
 
-// Shared category color map (DRY — used in detail panels)
+// Shared category color map (DRY ÔÇö used in detail panels)
 const CATEGORY_COLORS = {
   "ciencias": { color: "var(--accent-green)", bg: "rgba(16, 185, 129, 0.1)" },
   "humanas": { color: "var(--accent-purple)", bg: "rgba(139, 92, 246, 0.1)" },
@@ -328,7 +328,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // M3: Close detail panel on mobile "Back" gesture
   window.addEventListener("popstate", (e) => {
     if (e.state && e.state.detailOpen) {
-      // Do nothing — we're going back to the detail-open state
+      // Do nothing ÔÇö we're going back to the detail-open state
     } else {
       if (elements.detailPanel.classList.contains("open")) {
         elements.detailPanel.classList.remove("open");
@@ -389,7 +389,7 @@ function updateApiStatusUI() {
     elements.apiStatusDot.style.boxShadow = "0 0 8px var(--accent-cyan)";
   } else {
     elements.apiStatusDot.className = "status-dot local";
-    elements.apiStatusText.innerText = "Modo Local (Dicionário Técnico)";
+    elements.apiStatusText.innerText = "Modo Local (Dicion├írio T├®cnico)";
     elements.apiStatusDot.style.boxShadow = "0 0 8px var(--accent-green)";
   }
 }
@@ -426,7 +426,7 @@ function setupEventListeners() {
     updateApiStatusUI();
     elements.settingsModal.classList.remove("open");
     // Show notification alert
-    showToast("Configurações salvas com sucesso!");
+    showToast("Configura├º├Áes salvas com sucesso!");
   });
 
   // Export DB
@@ -450,7 +450,7 @@ function setupEventListeners() {
     // S5: File size limit (10MB max) to prevent browser freeze
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     if (file.size > MAX_FILE_SIZE) {
-      showToast("Arquivo muito grande (máx 10MB).", true);
+      showToast("Arquivo muito grande (m├íx 10MB).", true);
       e.target.value = "";
       return;
     }
@@ -483,9 +483,9 @@ function setupEventListeners() {
           saveData();
           renderTermsGrid();
           const imported = Object.keys(validatedData).length;
-          showToast(`${imported} termo(s) importado(s)${skipped > 0 ? `, ${skipped} ignorado(s) (formato inválido)` : ''}!`);
+          showToast(`${imported} termo(s) importado(s)${skipped > 0 ? `, ${skipped} ignorado(s) (formato inv├ílido)` : ''}!`);
         } else {
-          showToast("Formato de arquivo inválido. Esperado um objeto JSON.", true);
+          showToast("Formato de arquivo inv├ílido. Esperado um objeto JSON.", true);
         }
       } catch (err) {
         showToast("Erro ao processar o arquivo JSON.", true);
@@ -500,7 +500,7 @@ function setupEventListeners() {
   elements.clearDbBtn.addEventListener("click", async () => {
     const confirmed = await showCustomConfirm(
       `<i class="fa-solid fa-triangle-exclamation" style="color: var(--accent-pink);"></i> Limpar Banco de Dados`,
-      "ATENÇÃO: Isso apagará TODOS os seus termos cadastrados! Deseja continuar?",
+      "ATEN├ç├âO: Isso apagar├í TODOS os seus termos cadastrados! Deseja continuar?",
       true
     );
     if (confirmed) {
@@ -612,7 +612,7 @@ function setupEventListeners() {
     saveData();
     elements.addConnModal.classList.remove("open");
     openDetailPanel(sourceKey); // refresh
-    showToast("Conexão estabelecida!");
+    showToast("Conex├úo estabelecida!");
   });
 
   // Flashcards Flipping
@@ -624,12 +624,12 @@ function setupEventListeners() {
   // Flashcards Study Score Buttons
   elements.fcBtnCorrect.addEventListener("click", (e) => {
     e.stopPropagation(); // Stop flipping
-    showToast("Muito bem! Cartão memorizado.");
+    showToast("Muito bem! Cart├úo memorizado.");
     advanceFlashcard(1);
   });
   elements.fcBtnWrong.addEventListener("click", (e) => {
     e.stopPropagation(); // Stop flipping
-    showToast("Vamos reforçar esse depois.");
+    showToast("Vamos refor├ºar esse depois.");
     advanceFlashcard(1);
   });
 
@@ -654,13 +654,13 @@ function setupEventListeners() {
   elements.mmResetBtn.addEventListener("click", () => {
     arrangeMindmapNodesCircle();
     renderMindmap();
-    showToast("Mapa mental reorganizado em círculo.");
+    showToast("Mapa mental reorganizado em c├¡rculo.");
   });
 
   elements.mmClearLinksBtn.addEventListener("click", async () => {
     const confirmed = await showCustomConfirm(
-      `<i class="fa-solid fa-link-slash" style="color: var(--accent-pink);"></i> Limpar Conexões`,
-      "Deseja apagar todas as conexões entre termos? Isso não apagará os termos em si.",
+      `<i class="fa-solid fa-link-slash" style="color: var(--accent-pink);"></i> Limpar Conex├Áes`,
+      "Deseja apagar todas as conex├Áes entre termos? Isso n├úo apagar├í os termos em si.",
       true
     );
     if (confirmed) {
@@ -669,7 +669,7 @@ function setupEventListeners() {
       });
       saveData();
       renderMindmap();
-      showToast("Conexões limpas.");
+      showToast("Conex├Áes limpas.");
     }
   });
 
@@ -853,7 +853,7 @@ async function processDumpInput() {
       context = (match[2] || match[3] || "").trim();
     }
 
-    const slug = termText.toLowerCase().replace(/[^a-z0-9à-ú\s/-]/gi, '').trim();
+    const slug = termText.toLowerCase().replace(/[^a-z0-9├á-├║\s/-]/gi, '').trim();
     if (!slug) continue;
     
     // Check if it already exists
@@ -864,7 +864,7 @@ async function processDumpInput() {
     // Set temp loading term state
     state.terms[slug] = {
       term: cleanTerm,
-      definition: "Processando informações...",
+      definition: "Processando informa├º├Áes...",
       category: "custom",
       connections: [],
       notes: "",
@@ -876,7 +876,7 @@ async function processDumpInput() {
     renderTermsGrid();
 
     // Check BUILTIN Glossary first (using cleanTerm slug)
-    const cleanSlug = cleanTerm.toLowerCase().replace(/[^a-z0-9à-ú\s/-]/gi, '').trim();
+    const cleanSlug = cleanTerm.toLowerCase().replace(/[^a-z0-9├á-├║\s/-]/gi, '').trim();
     const cleanLookup = cleanSlug.replace(/-/g, ' ');
     let matchedKey = null;
     
@@ -911,7 +911,7 @@ async function processDumpInput() {
         }
       });
       
-      // P2: saveData removed here — batch save at end of function
+      // P2: saveData removed here ÔÇö batch save at end of function
       renderTermsGrid();
     } else if (state.geminiApiKey.trim() !== "") {
       // API Gemini Call with context!
@@ -920,7 +920,7 @@ async function processDumpInput() {
         if (aiResult) {
           state.terms[slug] = {
             term: aiResult.term || cleanTerm,
-            definition: aiResult.definition || "Sem definição disponível.",
+            definition: aiResult.definition || "Sem defini├º├úo dispon├¡vel.",
             category: aiResult.category || "custom",
             connections: [],
             notes: "",
@@ -944,7 +944,7 @@ async function processDumpInput() {
             });
           }
           
-          // P2: saveData removed here — batch save at end of function
+          // P2: saveData removed here ÔÇö batch save at end of function
           renderTermsGrid();
         } else {
           throw new Error("Empty Response");
@@ -953,7 +953,7 @@ async function processDumpInput() {
         console.error("Gemini API Error", err);
         state.terms[slug] = {
           term: cleanTerm,
-          definition: "Não foi possível resumir online. Clique em 'Editar Significado' para escrever o resumo você mesmo.",
+          definition: "N├úo foi poss├¡vel resumir online. Clique em 'Editar Significado' para escrever o resumo voc├¬ mesmo.",
           category: "custom",
           connections: [],
           notes: "",
@@ -961,7 +961,7 @@ async function processDumpInput() {
           y: Math.random() * 250 + 80,
           createdAt: Date.now()
         };
-        // P2: saveData removed here — batch save at end of function
+        // P2: saveData removed here ÔÇö batch save at end of function
         renderTermsGrid();
         showToast(`Erro na API ao resumir "${cleanTerm}". Modo Local Ativado.`, true);
       }
@@ -969,7 +969,7 @@ async function processDumpInput() {
       // Local default for custom unknown words
       state.terms[slug] = {
         term: cleanTerm,
-        definition: "Definição não cadastrada no dicionário offline. Clique em 'Editar Significado' para resumir.",
+        definition: "Defini├º├úo n├úo cadastrada no dicion├írio offline. Clique em 'Editar Significado' para resumir.",
         category: "custom",
         connections: [],
         notes: "",
@@ -991,24 +991,24 @@ async function fetchGeminiSummary(term, context = "") {
   const apiKey = state.geminiApiKey.trim();
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   
-  let systemPrompt = `Você é um tutor didático multidisciplinar, especialista em diversas áreas do conhecimento.
-  Crie um resumo explicativo simplificado porém cientificamente correto sobre o termo/conceito: "${term}".`;
+  let systemPrompt = `Voc├¬ ├® um tutor did├ítico multidisciplinar, especialista em diversas ├íreas do conhecimento.
+  Crie um resumo explicativo simplificado por├®m cientificamente correto sobre o termo/conceito: "${term}".`;
   
   if (context.trim() !== "") {
-    systemPrompt += `\nUSE ESTE CONTEXTO/DICA PARA DIRECIONAR A EXPLICAÇÃO: "${context.trim()}". Por exemplo, se o termo for ambíguo, explique especificamente com base neste significado.`;
+    systemPrompt += `\nUSE ESTE CONTEXTO/DICA PARA DIRECIONAR A EXPLICA├ç├âO: "${context.trim()}". Por exemplo, se o termo for amb├¡guo, explique especificamente com base neste significado.`;
   }
   
-  systemPrompt += `\nATENÇÃO IMPORTANTE SOBRE O IDIOMA: O valor da chave "term" no JSON de resposta deve ser EXATAMENTE o termo solicitado ("${term}"), respeitando o idioma original e grafia enviados pelo usuário (por exemplo, se o usuário enviar "Word" ou "Kernel", o valor de "term" deve ser exatamente "Word" ou "Kernel", nunca traduzido para "Palavra" ou "Núcleo"). Se o termo for estrangeiro, você deve explicar a tradução em português exclusivamente dentro do campo "definition".
+  systemPrompt += `\nATEN├ç├âO IMPORTANTE SOBRE O IDIOMA: O valor da chave "term" no JSON de resposta deve ser EXATAMENTE o termo solicitado ("${term}"), respeitando o idioma original e grafia enviados pelo usu├írio (por exemplo, se o usu├írio enviar "Word" ou "Kernel", o valor de "term" deve ser exatamente "Word" ou "Kernel", nunca traduzido para "Palavra" ou "N├║cleo"). Se o termo for estrangeiro, voc├¬ deve explicar a tradu├º├úo em portugu├¬s exclusivamente dentro do campo "definition".
   Classifique o termo em apenas uma destas categorias aceitas: "ciencias", "humanas", "exatas", "linguagens", "tecnologia", "custom".
-  Forneça uma lista de até 3 palavras-chave/termos minúsculos fortemente relacionados.
-  A resposta DEVE ser estritamente em formato JSON válido, respeitando o seguinte esquema de chaves:
+  Forne├ºa uma lista de at├® 3 palavras-chave/termos min├║sculos fortemente relacionados.
+  A resposta DEVE ser estritamente em formato JSON v├ílido, respeitando o seguinte esquema de chaves:
   {
     "term": "O mesmo termo original solicitado",
-    "definition": "Sua explicação em português (limite de 3 parágrafos curtos, cerca de 80-120 palavras)",
+    "definition": "Sua explica├º├úo em portugu├¬s (limite de 3 par├ígrafos curtos, cerca de 80-120 palavras)",
     "category": "categoria-escolhida",
     "connections": ["termo-relacionado-1", "termo-relacionado-2"]
   }
-  Retorne APENAS o JSON puro. Não englobe com blocos de marcação de markdown (como \`\`\`json).`;
+  Retorne APENAS o JSON puro. N├úo englobe com blocos de marca├º├úo de markdown (como \`\`\`json).`;
 
   const payload = {
     contents: [{
@@ -1054,7 +1054,7 @@ async function fetchGeminiSummary(term, context = "") {
     }
   } catch (parseErr) {
     console.error("Failed to parse Gemini response JSON:", parseErr);
-    throw new Error("Resposta da API em formato inválido.");
+    throw new Error("Resposta da API em formato inv├ílido.");
   }
   return null;
 }
@@ -1083,7 +1083,7 @@ function renderTermsGrid() {
       <div class="empty-state">
         <i class="fa-solid fa-folder-open empty-icon"></i>
         <h4 class="empty-title">Nenhum termo por aqui!</h4>
-        <p class="empty-desc">Experimente digitar termos na barra superior ou mude o filtro para visualizar outros cartões.</p>
+        <p class="empty-desc">Experimente digitar termos na barra superior ou mude o filtro para visualizar outros cart├Áes.</p>
       </div>
     `;
     return;
@@ -1117,7 +1117,7 @@ function renderTermsGrid() {
       <div class="card-footer">
         <span class="card-category">${escapeHTML(catLabel)}</span>
         ${connectionsCount > 0 ? `
-          <span class="card-connections-count" title="${connectionsCount} conexões de termos">
+          <span class="card-connections-count" title="${connectionsCount} conex├Áes de termos">
             <i class="fa-solid fa-link"></i> ${connectionsCount}
           </span>
         ` : ''}
@@ -1171,7 +1171,7 @@ async function deleteTerm(key) {
 
 function getCategoryLabel(cat) {
   const dict = {
-    "ciencias": "Ciências",
+    "ciencias": "Ci├¬ncias",
     "humanas": "Humanas",
     "exatas": "Exatas",
     "linguagens": "Linguagens",
@@ -1216,7 +1216,7 @@ function openDetailPanel(key) {
         pill.className = "connection-pill";
         pill.innerHTML = `
           <span>${escapeHTML(connItem.term)}</span>
-          <i class="fa-solid fa-xmark connection-delete" title="Romper conexão"></i>
+          <i class="fa-solid fa-xmark connection-delete" title="Romper conex├úo"></i>
         `;
         // Delete connection handler via addEventListener (safer than inline onclick)
         const deleteIcon = pill.querySelector('.connection-delete');
@@ -1254,7 +1254,7 @@ async function regenerateTermWithAi() {
   if (!key || !state.terms[key]) return;
   
   if (!state.geminiApiKey || state.geminiApiKey.trim() === "") {
-    showToast("Por favor, configure uma chave da API do Gemini nas configurações.", true);
+    showToast("Por favor, configure uma chave da API do Gemini nas configura├º├Áes.", true);
     return;
   }
   
@@ -1268,7 +1268,7 @@ async function regenerateTermWithAi() {
   
   showToast(`Consultando Gemini para "${originalTerm}"...`);
   
-  state.terms[key].definition = "Consultando inteligência artificial do Gemini... Aguarde.";
+  state.terms[key].definition = "Consultando intelig├¬ncia artificial do Gemini... Aguarde.";
   openDetailPanel(key);
   renderTermsGrid();
   
@@ -1276,7 +1276,7 @@ async function regenerateTermWithAi() {
     const aiResult = await fetchGeminiSummary(originalTerm, context);
     if (aiResult) {
       state.terms[key].term = aiResult.term || originalTerm;
-      state.terms[key].definition = aiResult.definition || "Sem definição disponível.";
+      state.terms[key].definition = aiResult.definition || "Sem defini├º├úo dispon├¡vel.";
       state.terms[key].category = aiResult.category || state.terms[key].category;
       
       if (Array.isArray(aiResult.connections)) {
@@ -1298,11 +1298,11 @@ async function regenerateTermWithAi() {
       renderTermsGrid();
       showToast("Termo atualizado com sucesso!");
     } else {
-      throw new Error("Resposta da IA vazia ou inválida.");
+      throw new Error("Resposta da IA vazia ou inv├ílida.");
     }
   } catch (err) {
     console.error("Gemini API Error during regeneration:", err);
-    state.terms[key].definition = `Erro ao consultar API do Gemini.\n\nDetalhes: ${err.message}\n\nVerifique se a chave de API fornecida nas configurações está correta.`;
+    state.terms[key].definition = `Erro ao consultar API do Gemini.\n\nDetalhes: ${err.message}\n\nVerifique se a chave de API fornecida nas configura├º├Áes est├í correta.`;
     openDetailPanel(key);
     renderTermsGrid();
     showToast("Erro ao consultar o Gemini.", true);
@@ -1331,7 +1331,7 @@ function openAddConnectionDialog() {
   });
 
   if (!hasEligible) {
-    showToast("Não há outros termos disponíveis para conectar.", true);
+    showToast("N├úo h├í outros termos dispon├¡veis para conectar.", true);
     return;
   }
 
@@ -1347,7 +1347,7 @@ function removeConnection(termA, termB) {
   }
   saveData();
   openDetailPanel(termA);
-  showToast("Conexão removida.");
+  showToast("Conex├úo removida.");
 }
 
 // ----------------------------------------------------
@@ -1399,12 +1399,12 @@ function renderFlashcard() {
   
   elements.fcFrontTerm.innerText = item.term;
   elements.fcFrontCategory.innerText = getCategoryLabel(item.category);
-  elements.fcBackCategory.innerText = "Definição - " + getCategoryLabel(item.category);
+  elements.fcBackCategory.innerText = "Defini├º├úo - " + getCategoryLabel(item.category);
   
   // Combine definition and personal notes (escape user content to prevent XSS)
   let explanation = `<p>${escapeHTML(item.definition)}</p>`;
   if (item.notes) {
-    explanation += `<div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 0.85rem; color: var(--accent-cyan); text-align: left;"><i class="fa-solid fa-pen"></i> <strong>Anotações:</strong> ${escapeHTML(item.notes)}</div>`;
+    explanation += `<div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 0.85rem; color: var(--accent-cyan); text-align: left;"><i class="fa-solid fa-pen"></i> <strong>Anota├º├Áes:</strong> ${escapeHTML(item.notes)}</div>`;
   }
   elements.fcBackDefinition.innerHTML = explanation;
   
@@ -1443,7 +1443,7 @@ function initQuiz() {
       <div class="empty-state" style="padding: 2rem 0;">
         <i class="fa-solid fa-triangle-exclamation empty-icon" style="color: var(--accent-orange)"></i>
         <h4 class="empty-title">Termos Insuficientes</h4>
-        <p class="empty-desc">Você precisa de pelo menos <strong>4 termos cadastrados</strong> para gerar perguntas de múltipla escolha. Atualmente você tem apenas ${keys.length}.</p>
+        <p class="empty-desc">Voc├¬ precisa de pelo menos <strong>4 termos cadastrados</strong> para gerar perguntas de m├║ltipla escolha. Atualmente voc├¬ tem apenas ${keys.length}.</p>
       </div>
     `;
     return;
@@ -1461,7 +1461,7 @@ function initQuiz() {
     <div class="quiz-options" id="quiz-options-container"></div>
     <div class="quiz-footer">
       <button class="btn-primary" id="quiz-next-btn" style="display: none;">
-        Próxima Pergunta <i class="fa-solid fa-arrow-right"></i>
+        Pr├│xima Pergunta <i class="fa-solid fa-arrow-right"></i>
       </button>
     </div>
   `;
@@ -1524,8 +1524,8 @@ function generateQuizQuestions(allKeys, maxQuestions) {
       type: qType,
       targetKey: correctKey,
       questionText: qType === 0 
-        ? `Qual é o termo correspondente à seguinte definição?<br><br><em>"${escapeHTML(correctItem.definition)}"</em>` 
-        : `Qual é o significado correto do termo: <strong>${escapeHTML(correctItem.term)}</strong>?`,
+        ? `Qual ├® o termo correspondente ├á seguinte defini├º├úo?<br><br><em>"${escapeHTML(correctItem.definition)}"</em>` 
+        : `Qual ├® o significado correto do termo: <strong>${escapeHTML(correctItem.term)}</strong>?`,
       options: options
     });
   }
@@ -1543,8 +1543,8 @@ function renderQuizQuestion() {
     elements.quizQuestionText.innerHTML = `
       <div style="text-align: center; padding: 1.5rem 0;">
         <i class="fa-solid fa-trophy" style="font-size: 3rem; color: var(--accent-cyan); margin-bottom: 1rem;"></i>
-        <h3>Quiz Concluído!</h3>
-        <p style="margin-top: 0.5rem; color: var(--text-secondary);">Você acertou <strong>${state.quiz.score}</strong> de <strong>${questionsCount}</strong> perguntas.</p>
+        <h3>Quiz Conclu├¡do!</h3>
+        <p style="margin-top: 0.5rem; color: var(--text-secondary);">Voc├¬ acertou <strong>${state.quiz.score}</strong> de <strong>${questionsCount}</strong> perguntas.</p>
         <button class="btn-primary" id="quiz-replay-btn" style="margin: 1.5rem auto 0 auto;">Jogar Novamente</button>
       </div>
     `;
@@ -1602,9 +1602,9 @@ function handleQuizAnswer(idx, isCorrect, clickedBtn) {
   if (isCorrect) {
     state.quiz.score++;
     elements.quizScore.innerText = `Acertos: ${state.quiz.score}`;
-    showToast("Parabéns! Resposta correta.");
+    showToast("Parab├®ns! Resposta correta.");
   } else {
-    showToast("Hum, não foi dessa vez.", true);
+    showToast("Hum, n├úo foi dessa vez.", true);
   }
 
   elements.quizNextBtn.style.display = "flex";
@@ -1801,11 +1801,11 @@ function handleMindmapNodeClick(clickedKey) {
     if (sourceNode.connections.includes(clickedKey)) {
       sourceNode.connections = sourceNode.connections.filter(c => c !== clickedKey);
       destNode.connections = destNode.connections.filter(c => c !== activeSrc);
-      showToast("Conexão removida.");
+      showToast("Conex├úo removida.");
     } else {
       sourceNode.connections.push(clickedKey);
       destNode.connections.push(activeSrc);
-      showToast("Conexão criada!");
+      showToast("Conex├úo criada!");
     }
     
     saveData();
@@ -1829,7 +1829,7 @@ function openMindmapDetail(key) {
   elements.mmDetailCategory.style.border = `1px solid ${catStyle.color}`;
 
   elements.mmDetailDefinition.innerText = item.definition;
-  elements.mmDetailNotes.innerText = item.notes ? item.notes : "Nenhuma anotação registrada neste termo.";
+  elements.mmDetailNotes.innerText = item.notes ? item.notes : "Nenhuma anota├º├úo registrada neste termo.";
   
   elements.mmDetailPanel.classList.add("open");
   renderMindmap();
@@ -1839,7 +1839,7 @@ function setupSvgHandlers() {
   let dragAnimFrameId = null;
   let lastPinchDist = 0; // For pinch-to-zoom
 
-  // ── Helper: get SVG coordinates from client coords ──
+  // ÔöÇÔöÇ Helper: get SVG coordinates from client coords ÔöÇÔöÇ
   function clientToSvg(clientX, clientY) {
     const rect = elements.mindmapSvg.getBoundingClientRect();
     const zoom = state.mindmap.zoom;
@@ -1850,7 +1850,7 @@ function setupSvgHandlers() {
     };
   }
 
-  // ── Helper: start dragging a node ──
+  // ÔöÇÔöÇ Helper: start dragging a node ÔöÇÔöÇ
   function startNodeDrag(key, clientX, clientY) {
     state.mindmap.draggedNodeId = key;
     const svg = clientToSvg(clientX, clientY);
@@ -1860,7 +1860,7 @@ function setupSvgHandlers() {
     };
   }
 
-  // ── Helper: move node to new client position ──
+  // ÔöÇÔöÇ Helper: move node to new client position ÔöÇÔöÇ
   function moveNodeTo(clientX, clientY) {
     const key = state.mindmap.draggedNodeId;
     if (!key) return;
@@ -1870,7 +1870,7 @@ function setupSvgHandlers() {
     updateNodeSvgPosition(key);
   }
 
-  // ── Helper: start panning ──
+  // ÔöÇÔöÇ Helper: start panning ÔöÇÔöÇ
   function startPan(clientX, clientY) {
     state.mindmap.isPanning = true;
     state.mindmap.panStart = {
@@ -1880,7 +1880,7 @@ function setupSvgHandlers() {
     elements.mindmapSvg.style.cursor = "grabbing";
   }
 
-  // ── Helper: update pan position ──
+  // ÔöÇÔöÇ Helper: update pan position ÔöÇÔöÇ
   function updatePan(clientX, clientY) {
     state.mindmap.pan = {
       x: clientX - state.mindmap.panStart.x,
@@ -1889,7 +1889,7 @@ function setupSvgHandlers() {
     applyViewportTransform();
   }
 
-  // ── Helper: end all drag/pan operations ──
+  // ÔöÇÔöÇ Helper: end all drag/pan operations ÔöÇÔöÇ
   function endInteraction() {
     if (state.mindmap.isPanning) {
       state.mindmap.isPanning = false;
@@ -1902,7 +1902,7 @@ function setupSvgHandlers() {
     lastPinchDist = 0;
   }
 
-  // ═══ MOUSE EVENTS ═══
+  // ÔòÉÔòÉÔòÉ MOUSE EVENTS ÔòÉÔòÉÔòÉ
 
   // Mouse Down on canvas background triggers panning
   elements.mindmapSvg.addEventListener("mousedown", (e) => {
@@ -1934,9 +1934,9 @@ function setupSvgHandlers() {
   // MouseUp terminates actions
   document.addEventListener("mouseup", endInteraction);
 
-  // ═══ TOUCH EVENTS (M1 + M2) ═══
+  // ÔòÉÔòÉÔòÉ TOUCH EVENTS (M1 + M2) ÔòÉÔòÉÔòÉ
 
-  // Touch start — detect node drag vs canvas pan vs pinch-zoom
+  // Touch start ÔÇö detect node drag vs canvas pan vs pinch-zoom
   elements.mindmapSvg.addEventListener("touchstart", (e) => {
     if (e.touches.length === 2) {
       // M2: Pinch-to-zoom start
@@ -1961,7 +1961,7 @@ function setupSvgHandlers() {
     }
   }, { passive: false });
 
-  // Touch move — drag node, pan canvas, or pinch-zoom
+  // Touch move ÔÇö drag node, pan canvas, or pinch-zoom
   elements.mindmapSvg.addEventListener("touchmove", (e) => {
     if (e.touches.length === 2 && lastPinchDist > 0) {
       // M2: Pinch-to-zoom
@@ -1992,7 +1992,7 @@ function setupSvgHandlers() {
     }
   }, { passive: false });
 
-  // Touch end — finalize
+  // Touch end ÔÇö finalize
   document.addEventListener("touchend", (e) => {
     if (e.touches.length < 2) lastPinchDist = 0;
     if (e.touches.length === 0) endInteraction();
@@ -2052,7 +2052,7 @@ function renderLinksRealtime(movedKey) {
   });
 }
 
-// P1: Optimized physics update — updates existing DOM positions without full re-render
+// P1: Optimized physics update ÔÇö updates existing DOM positions without full re-render
 function updateAllNodePositions() {
   const keys = Object.keys(state.terms);
   keys.forEach(key => {
@@ -2101,7 +2101,7 @@ function startPhysics() {
   });
 
   state.mindmap.physicsEnabled = true;
-  elements.mmPhysicsBtn.innerHTML = `<i class="fa-solid fa-wind" style="color: var(--accent-green);"></i> Física: Ativa`;
+  elements.mmPhysicsBtn.innerHTML = `<i class="fa-solid fa-wind" style="color: var(--accent-green);"></i> F├¡sica: Ativa`;
   elements.mmPhysicsBtn.classList.add("active");
 
   function physicsLoop() {
@@ -2122,7 +2122,7 @@ function stopPhysics() {
     state.mindmap.animationFrameId = null;
   }
   if (elements.mmPhysicsBtn) {
-    elements.mmPhysicsBtn.innerHTML = `<i class="fa-solid fa-wind"></i> Física: Desativada`;
+    elements.mmPhysicsBtn.innerHTML = `<i class="fa-solid fa-wind"></i> F├¡sica: Desativada`;
     elements.mmPhysicsBtn.classList.remove("active");
   }
   saveData();
@@ -2228,17 +2228,17 @@ function tickPhysics() {
 
 async function suggestConnectionsWithAi() {
   if (!state.geminiApiKey || state.geminiApiKey.trim() === "") {
-    showToast("Por favor, configure uma chave da API do Gemini nas configurações.", true);
+    showToast("Por favor, configure uma chave da API do Gemini nas configura├º├Áes.", true);
     return;
   }
 
   const keys = Object.keys(state.terms);
   if (keys.length < 2) {
-    showToast("Adicione pelo menos 2 termos para gerar conexões.", true);
+    showToast("Adicione pelo menos 2 termos para gerar conex├Áes.", true);
     return;
   }
 
-  showToast("IA analisando termos e sugerindo conexões...");
+  showToast("IA analisando termos e sugerindo conex├Áes...");
   elements.mmAiSuggestBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="color: var(--accent-cyan);"></i> Conectando...`;
   elements.mmAiSuggestBtn.disabled = true;
 
@@ -2262,9 +2262,9 @@ async function suggestConnectionsWithAi() {
       
       saveData();
       renderMindmap();
-      showToast(`IA gerou ${addedCount} nova(s) conexão(ões) de estudos!`);
+      showToast(`IA gerou ${addedCount} nova(s) conex├úo(├Áes) de estudos!`);
     } else {
-      showToast("A IA não encontrou novas conexões óbvias entre esses termos.");
+      showToast("A IA n├úo encontrou novas conex├Áes ├│bvias entre esses termos.");
     }
   } catch (err) {
     console.error("AI connection suggest error:", err);
@@ -2281,19 +2281,19 @@ async function fetchAiConnections(keys) {
   
   const termsList = keys.map(k => `ID: "${k}" - Termo: "${state.terms[k].term}"`).join("\n");
   
-  const systemPrompt = `Você é um tutor didático especialista em criar mapas mentais de aprendizado.
-  Abaixo está uma lista de termos de estudo atualmente salvos pelo estudante.
-  Seu objetivo é analisar os termos e sugerir quais deles possuem uma forte relação direta de aprendizado (ex: causa e efeito, parte-todo, conceito relacionado).
-  Retorne as relações sugeridas na forma de pares de IDs.
-  A resposta DEVE ser estritamente em formato JSON válido, respeitando o seguinte esquema de chaves:
+  const systemPrompt = `Voc├¬ ├® um tutor did├ítico especialista em criar mapas mentais de aprendizado.
+  Abaixo est├í uma lista de termos de estudo atualmente salvos pelo estudante.
+  Seu objetivo ├® analisar os termos e sugerir quais deles possuem uma forte rela├º├úo direta de aprendizado (ex: causa e efeito, parte-todo, conceito relacionado).
+  Retorne as rela├º├Áes sugeridas na forma de pares de IDs.
+  A resposta DEVE ser estritamente em formato JSON v├ílido, respeitando o seguinte esquema de chaves:
   {
     "connections": [
       ["id-termo-1", "id-termo-2"],
       ["id-termo-3", "id-termo-4"]
     ]
   }
-  Sugira apenas relações que façam real sentido conceitual e limite a no máximo 1.5 vezes o número total de termos.
-  Retorne APENAS o JSON puro. Não englobe com blocos de marcação de markdown (como \`\`\`json).
+  Sugira apenas rela├º├Áes que fa├ºam real sentido conceitual e limite a no m├íximo 1.5 vezes o n├║mero total de termos.
+  Retorne APENAS o JSON puro. N├úo englobe com blocos de marca├º├úo de markdown (como \`\`\`json).
 
   Lista de Termos:
   ${termsList}`;
@@ -2334,7 +2334,8 @@ async function fetchAiConnections(keys) {
     }
   } catch (parseErr) {
     console.error("Failed to parse Gemini AI Connections response JSON:", parseErr);
-    throw new Error("Resposta da API em formato inválido.");
+    throw new Error("Resposta da API em formato inv├ílido.");
   }
   return [];
 }
+

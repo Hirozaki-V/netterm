@@ -1,6 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 
-/* CSS Variables — Preserving all logical variables required by app.js and category styling */
+/* CSS Variables ÔÇö Preserving all logical variables required by app.js and category styling */
 :root {
   --bg-primary: #05060b;
   --bg-secondary: #0c0e18;
@@ -310,7 +310,7 @@ main {
   display: flex;
 }
 
-/* ─── 1. DASHBOARD TAB ─── */
+/* ÔöÇÔöÇÔöÇ 1. DASHBOARD TAB ÔöÇÔöÇÔöÇ */
 
 /* Quick Dump Container (Academic AI-styled box) */
 .quick-dump-container {
@@ -919,7 +919,7 @@ main {
   line-height: 1.6;
 }
 
-/* ─── 2. FLASHCARDS TAB ─── */
+/* ÔöÇÔöÇÔöÇ 2. FLASHCARDS TAB ÔöÇÔöÇÔöÇ */
 
 .flashcards-wrapper {
   flex: 1;
@@ -1090,7 +1090,7 @@ main {
   text-align: center;
 }
 
-/* ─── 3. QUIZ TAB ─── */
+/* ÔöÇÔöÇÔöÇ 3. QUIZ TAB ÔöÇÔöÇÔöÇ */
 
 .quiz-wrapper {
   flex: 1;
@@ -1241,7 +1241,7 @@ main {
   margin-top: 0.5rem;
 }
 
-/* ─── 4. MAPA DE CONEXÕES (MIND MAP) TAB ─── */
+/* ÔöÇÔöÇÔöÇ 4. MAPA DE CONEX├òES (MIND MAP) TAB ÔöÇÔöÇÔöÇ */
 
 .mindmap-wrapper {
   flex: 1;
@@ -1540,7 +1540,7 @@ main {
   font-weight: 300;
 }
 
-/* ─── 5. MODALS & DIALOGS ─── */
+/* ÔöÇÔöÇÔöÇ 5. MODALS & DIALOGS ÔöÇÔöÇÔöÇ */
 
 .modal-overlay {
   position: fixed;
@@ -1717,12 +1717,12 @@ main {
   background: rgba(0, 0, 0, 0.15);
 }
 
-/* ─── 6. MOBILE MENU BUTTON ─── */
+/* ÔöÇÔöÇÔöÇ 6. MOBILE MENU BUTTON ÔöÇÔöÇÔöÇ */
 .mobile-menu-btn {
   display: none;
 }
 
-/* ─── 7. ANIMATIONS / HELPERS ─── */
+/* ÔöÇÔöÇÔöÇ 7. ANIMATIONS / HELPERS ÔöÇÔöÇÔöÇ */
 
 .term-card.loading {
   animation: cardPulse 1.5s ease-in-out infinite;
@@ -1742,7 +1742,7 @@ main {
   font-family: var(--font-body) !important;
 }
 
-/* ─── RESPONSIVE: Tablets (≤ 1024px) ─── */
+/* ÔöÇÔöÇÔöÇ RESPONSIVE: Tablets (Ôëñ 1024px) ÔöÇÔöÇÔöÇ */
 @media (max-width: 1024px) {
   .mobile-menu-btn {
     display: flex;
@@ -1818,7 +1818,7 @@ main {
   }
 }
 
-/* ─── RESPONSIVE: Mobile Landscape / Portrait (≤ 768px) ─── */
+/* ÔöÇÔöÇÔöÇ RESPONSIVE: Mobile Landscape / Portrait (Ôëñ 768px) ÔöÇÔöÇÔöÇ */
 @media (max-width: 768px) {
   .logo-text {
     font-size: 1.25rem;
@@ -2124,7 +2124,7 @@ main {
   }
 }
 
-/* ─── RESPONSIVE: Small Mobile Portrait (≤ 480px) ─── */
+/* ÔöÇÔöÇÔöÇ RESPONSIVE: Small Mobile Portrait (Ôëñ 480px) ÔöÇÔöÇÔöÇ */
 @media (max-width: 480px) {
   header {
     padding: 0.5rem 0.75rem;
@@ -2325,7 +2325,7 @@ main {
   }
 }
 
-/* ─── RESPONSIVE: Very small screens (≤ 360px) ─── */
+/* ÔöÇÔöÇÔöÇ RESPONSIVE: Very small screens (Ôëñ 360px) ÔöÇÔöÇÔöÇ */
 @media (max-width: 360px) {
   .flashcard-stage {
     height: 165px;
@@ -2346,7 +2346,7 @@ main {
   }
 }
 
-/* ─── Safe Area Margins for Notch Devices ─── */
+/* ÔöÇÔöÇÔöÇ Safe Area Margins for Notch Devices ÔöÇÔöÇÔöÇ */
 @supports (padding: env(safe-area-inset-bottom)) {
   @media (max-width: 768px) {
     .detail-actions {
@@ -2363,7 +2363,7 @@ main {
   }
 }
 
-/* ─── Reduced Motion Compatibility ─── */
+/* ÔöÇÔöÇÔöÇ Reduced Motion Compatibility ÔöÇÔöÇÔöÇ */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -2375,3 +2375,4 @@ main {
     transition: none !important;
   }
 }
+

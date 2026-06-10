@@ -676,11 +676,17 @@ function MindMap() {
   const nodeKeys = Object.keys(terms);
 
   nodeKeys.forEach(sourceKey => {
-    const sourceNode = nodesRef.current[sourceKey] || terms[sourceKey];
-    if (sourceNode && sourceNode.connections) {
+    const sourceNode = terms[sourceKey];
+    if (!sourceNode) return;
+    const sourceX = nodesRef.current[sourceKey]?.x || sourceNode.x;
+    const sourceY = nodesRef.current[sourceKey]?.y || sourceNode.y;
+
+    if (sourceNode.connections) {
       sourceNode.connections.forEach(destKey => {
-        const destNode = nodesRef.current[destKey] || terms[destKey];
+        const destNode = terms[destKey];
         if (destNode) {
+          const destX = nodesRef.current[destKey]?.x || destNode.x;
+          const destY = nodesRef.current[destKey]?.y || destNode.y;
           const pairId = [sourceKey, destKey].sort().join("-");
           if (!drawnPairs.has(pairId)) {
             drawnPairs.add(pairId);
@@ -689,10 +695,10 @@ function MindMap() {
               <line
                 key={pairId}
                 data-link-id={pairId}
-                x1={sourceNode.x}
-                y1={sourceNode.y}
-                x2={destNode.x}
-                y2={destNode.y}
+                x1={sourceX}
+                y1={sourceY}
+                x2={destX}
+                y2={destY}
                 className={`mindmap-link ${isHighlighted ? 'highlighted' : ''}`}
               />
             );
@@ -749,12 +755,15 @@ function MindMap() {
             {/* Draw nodes */}
             <g id="nodes-group" ref={nodesGroupRef}>
               {nodeKeys.map(key => {
-                const node = nodesRef.current[key] || terms[key];
+                const node = terms[key];
+                if (!node) return null;
+                const x = nodesRef.current[key]?.x || node.x;
+                const y = nodesRef.current[key]?.y || node.y;
                 let gClass = "mindmap-node " + (node.category || "custom");
                 if (key === selectedNodeId) gClass += " selected";
                 if (key === activeConnSource) gClass += " active-source";
 
-                let displayName = node.term;
+                let displayName = node.term || "";
                 if (displayName.includes("(")) {
                   displayName = displayName.split("(")[0].trim();
                 }
@@ -773,7 +782,7 @@ function MindMap() {
                   <g
                     key={key}
                     className={gClass}
-                    transform={`translate(${node.x}, ${node.y})`}
+                    transform={`translate(${x}, ${y})`}
                     data-id={key}
                     onClick={(e) => {
                       handleNodeClick(e, key);

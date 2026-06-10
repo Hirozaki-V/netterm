@@ -72,29 +72,42 @@ function Pomodoro() {
   useEffect(() => {
     let timer = null;
     if (pomoIsRunning) {
+      const targetEndTime = Date.now() + pomoTimeLeft * 1000;
       timer = setInterval(() => {
-        setPomoTimeLeft((prev) => {
-          if (prev <= 1) {
-            setPomoIsRunning(false);
-            playPomoSound();
-            if (pomoMode === 'work') {
-              setPomoCycles((c) => c + 1);
-              showToast("Ciclo de foco concluído! Bom trabalho.");
-            } else {
-              showToast("Intervalo concluído! Hora de voltar aos estudos.");
-            }
-            return getPomoTimeForMode(pomoMode);
+        const remaining = Math.max(0, Math.round((targetEndTime - Date.now()) / 1000));
+        setPomoTimeLeft(remaining);
+        
+        if (remaining <= 0) {
+          setPomoIsRunning(false);
+          playPomoSound();
+          if (pomoMode === 'work') {
+            setPomoCycles((c) => c + 1);
+            showToast("Ciclo de foco concluído! Bom trabalho.");
+          } else {
+            showToast("Intervalo concluído! Hora de voltar aos estudos.");
           }
-          return prev - 1;
-        });
-      }, 1000);
+          setPomoTimeLeft(getPomoTimeForMode(pomoMode));
+        }
+      }, 500);
     }
     return () => {
       if (timer) clearInterval(timer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pomoIsRunning, pomoMode, showToast]);
 
   const handleStart = () => {
+    // Inicializa o AudioContext no clique do usuário para evitar bloqueio de autoplay
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume();
+      }
+    } catch (err) {
+      console.error("Erro ao inicializar AudioContext:", err);
+    }
     setPomoIsRunning(true);
   };
 

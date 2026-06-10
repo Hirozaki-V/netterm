@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect, useCallback, useMemo, useRef, useContext } from 'react';
 import { UIContext } from './UIContext';
+import { escapeHTML } from '../utils/security';
 import BUILTIN_DICTIONARY from '../data/dictionary';
 import { fetchGeminiSummary as fetchGeminiSummaryService } from '../services/aiService';
 import {
@@ -130,7 +131,7 @@ export function DataProvider({ children }) {
         return {
           ...prev,
           [slug]: {
-            term: cleanTerm,
+            term: escapeHTML(cleanTerm),
             definition: "Processando informações...",
             category: "custom",
             connections: [],
@@ -158,8 +159,8 @@ export function DataProvider({ children }) {
         saveTermsData((prev) => {
           const next = { ...prev };
           next[slug] = {
-            term: glossaryItem.term,
-            definition: glossaryItem.definition,
+            term: escapeHTML(glossaryItem.term),
+            definition: escapeHTML(glossaryItem.definition),
             category: glossaryItem.category,
             connections: glossaryConns.filter(c => next[c] !== undefined),
             notes: "",
@@ -188,8 +189,8 @@ export function DataProvider({ children }) {
             saveTermsData((prev) => {
               const next = { ...prev };
               next[slug] = {
-                term: aiResult.term || cleanTerm,
-                definition: aiResult.definition || "Sem definição disponível.",
+                term: escapeHTML(aiResult.term || cleanTerm),
+                definition: escapeHTML(aiResult.definition || "Sem definição disponível."),
                 category: aiResult.category || "custom",
                 connections: [],
                 notes: "",
@@ -228,7 +229,7 @@ export function DataProvider({ children }) {
             return {
               ...prev,
               [slug]: {
-                term: cleanTerm,
+                term: escapeHTML(cleanTerm),
                 definition: "Não foi possível resumir online. Clique em 'Editar Significado' para escrever o resumo você mesmo.",
                 category: "custom",
                 connections: [],
@@ -246,7 +247,7 @@ export function DataProvider({ children }) {
           return {
             ...prev,
             [slug]: {
-              term: cleanTerm,
+              term: escapeHTML(cleanTerm),
               definition: "Definição não cadastrada no dicionário offline. Clique em 'Editar Significado' para resumir.",
               category: "custom",
               connections: [],
@@ -307,7 +308,7 @@ export function DataProvider({ children }) {
         [key]: {
           ...prev[key],
           category,
-          definition: definition.trim()
+          definition: escapeHTML(definition.trim())
         }
       };
     });
@@ -320,7 +321,7 @@ export function DataProvider({ children }) {
         ...prev,
         [key]: {
           ...prev[key],
-          notes
+          notes: escapeHTML(notes)
         }
       };
     });

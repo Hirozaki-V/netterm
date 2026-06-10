@@ -60,11 +60,23 @@ function Quiz() {
       // Question Type: 0 = Given Definition find Term, 1 = Given Term find Definition
       const qType = Math.random() > 0.5 ? 0 : 1;
       
-      // Pick 3 distractors from ALL keys in the database to guarantee we always have 4 options
-      const distractors = termKeys
-        .filter((k) => k !== correctKey)
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 3);
+      // Pick 3 distractors. First, try to pick from the same category.
+      const sameCategoryKeys = termKeys.filter(
+        (k) => k !== correctKey && terms[k].category === correctItem.category
+      );
+      
+      const shuffledSameCat = [...sameCategoryKeys].sort(() => Math.random() - 0.5);
+      let distractors = shuffledSameCat.slice(0, 3);
+      
+      // If we don't have 3 distractors, fill the rest with other categories
+      if (distractors.length < 3) {
+        const remainingNeeded = 3 - distractors.length;
+        const otherCategoryKeys = termKeys.filter(
+          (k) => k !== correctKey && terms[k].category !== correctItem.category
+        );
+        const shuffledOthers = [...otherCategoryKeys].sort(() => Math.random() - 0.5);
+        distractors = [...distractors, ...shuffledOthers.slice(0, remainingNeeded)];
+      }
 
       const options = [];
       

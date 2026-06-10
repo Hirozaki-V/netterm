@@ -374,7 +374,7 @@ function SettingsModal() {
                         </li>
                         <li style={{ marginBottom: '0.3rem' }}>Configure a tela de consentimento OAuth e adicione seu e-mail como usuário de teste.</li>
                         <li style={{ marginBottom: '0.3rem' }}>Crie uma credencial de <strong>ID do cliente OAuth</strong> para aplicativo da Web.</li>
-                        <li>Nas Origens JavaScript autorizadas, adicione: <code>http://localhost:5173</code> e <code>http://localhost:3000</code>.</li>
+                        <li>Nas Origens JavaScript autorizadas, adicione: <code>http://localhost:5173</code>, <code>http://localhost:5174</code> e <code>http://localhost:3000</code>.</li>
                       </ol>
                     </div>
                   </div>

@@ -2253,8 +2253,11 @@ main {
 
   .card-body {
     font-size: 0.82rem;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
     margin-bottom: 0.85rem;
+    overflow: hidden;
   }
 
   /* Mobile Fullscreen Detail Panel */
@@ -2271,15 +2274,18 @@ main {
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
+    width: 100% !important;
+    max-width: 100% !important;
     min-width: 0 !important;
-    height: 100vh !important;
+    height: 100% !important;
     z-index: 1200 !important;
-    background: var(--bg-secondary) !important;
+    background: var(--bg-primary) !important;
     flex-direction: column !important;
     box-sizing: border-box !important;
-    border-left: none !important;
+    border: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    transform: none !important;
   }
 
   .detail-header {
@@ -2444,8 +2450,8 @@ main {
 
   /* Modals */
   .modal {
-    width: min(520px, 92vw) !important;
-    max-width: 100% !important;
+    width: 90% !important;
+    max-width: 420px !important;
     max-height: 85vh !important;
     margin: auto !important;
     position: relative !important;
@@ -2891,10 +2897,11 @@ main {
 
   /* FASE 1: Correção do Quiz (Mobile-First) */
   .quiz-card {
-    width: 100% !important;
-    max-width: 100% !important;
-    padding: 1rem !important;
-    margin: 0 !important;
+    width: calc(100% - 1rem) !important;
+    max-width: calc(100% - 1rem) !important;
+    padding: 1.25rem !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
   }
 
   .quiz-question {

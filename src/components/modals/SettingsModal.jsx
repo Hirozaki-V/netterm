@@ -214,14 +214,7 @@ function SettingsModal() {
           ></i>
         </div>
 
-        {/* Tab Buttons for layout segregation */}
-        <div className="settings-tabs" style={{ 
-          display: 'flex', 
-          gap: '0.5rem', 
-          margin: '0.75rem 1.5rem 0.5rem 1.5rem', 
-          borderBottom: '1px solid var(--border-color)', 
-          paddingBottom: '0.75rem' 
-        }}>
+        <div className="settings-tabs">
           <button
             className={`filter-tab${activeSettingsTab === 'local' ? ' active' : ''}`}
             onClick={() => setActiveSettingsTab('local')}

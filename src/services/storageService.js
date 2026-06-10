@@ -143,12 +143,6 @@ export async function saveApiKey(key) {
   }
 }
 
-/**
- * Salva o Google Client ID no IndexedDB de forma assíncrona.
- * 
- * @param {string} clientId - O Client ID do Google OAuth do usuário.
- * @returns {Promise<void>}
- */
 export async function saveGoogleClientId(clientId) {
   try {
     if (clientId && clientId.trim()) {
@@ -158,6 +152,51 @@ export async function saveGoogleClientId(clientId) {
     }
   } catch (error) {
     console.error("Erro ao salvar Google Client ID no IndexedDB:", error);
+  }
+}
+
+/**
+ * Salva o token de sessão do Google Drive no IndexedDB de forma assíncrona.
+ * 
+ * @param {string} token - O access_token do Google OAuth2.
+ * @returns {Promise<void>}
+ */
+export async function saveGoogleToken(token) {
+  try {
+    if (token && token.trim()) {
+      await localforage.setItem('studyflow_google_token', token.trim());
+      await localforage.setItem('studyflow_google_token_time', Date.now());
+    } else {
+      await localforage.removeItem('studyflow_google_token');
+      await localforage.removeItem('studyflow_google_token_time');
+    }
+  } catch (error) {
+    console.error("Erro ao salvar Token do Google Drive no IndexedDB:", error);
+  }
+}
+
+/**
+ * Carrega o token de sessão do Google Drive do IndexedDB se for válido.
+ * Consideramos válido se tiver menos de 50 minutos (3000 segundos).
+ * 
+ * @returns {Promise<string|null>} Retorna o token ou null.
+ */
+export async function loadGoogleToken() {
+  try {
+    const token = await localforage.getItem('studyflow_google_token');
+    const tokenTime = await localforage.getItem('studyflow_google_token_time');
+    if (token && tokenTime) {
+      const elapsedMinutes = (Date.now() - tokenTime) / (1000 * 60);
+      if (elapsedMinutes < 50) {
+        return token;
+      }
+    }
+    // Remove if expired
+    await localforage.removeItem('studyflow_google_token');
+    await localforage.removeItem('studyflow_google_token_time');
+    return null;
+  } catch (error) {
+    return null;
   }
 }
 

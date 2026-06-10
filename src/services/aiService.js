@@ -128,7 +128,7 @@ export async function fetchGeminiSummary(term, context = "", apiKey) {
       return JSON.parse(jsonText);
     }
   } catch (parseErr) {
-    console.error("Failed to parse Gemini response JSON:", parseErr);
+    // console.error removido por segurança (mitigação de vazamento de chaves via stacktrace)
     throw new Error("Resposta da API em formato inválido.", { cause: parseErr });
   }
   throw new Error("Resposta da API vazia ou inválida.");
@@ -206,7 +206,7 @@ export async function fetchAiConnections(keys, terms, apiKey) {
       return parsed.connections || [];
     }
   } catch (parseErr) {
-    console.error("Failed to parse Gemini AI Connections response JSON:", parseErr);
+    // console.error removido por segurança
     throw new Error("Resposta da API em formato inválido.", { cause: parseErr });
   }
   return [];

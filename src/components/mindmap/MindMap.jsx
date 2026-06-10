@@ -303,7 +303,10 @@ function MindMap() {
   };
 
   const startPhysics = () => {
-    if (animationFrameIdRef.current) return;
+    if (animationFrameIdRef.current) {
+      cancelAnimationFrame(animationFrameIdRef.current);
+      animationFrameIdRef.current = null;
+    }
     
     Object.keys(nodesRef.current).forEach(key => {
       const node = nodesRef.current[key];

@@ -6,8 +6,15 @@
  * Grava dados no escopo isolado appDataFolder para segurança e privacidade do usuário.
  */
 
+import { loadGoogleToken, saveGoogleToken } from './storageService';
+
 let tokenClient = null;
 let initializedClientId = null;
+
+let envClientId = "";
+try {
+  envClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+} catch (e) {}
 
 /**
  * Inicializa o cliente de token do Google Identity Services.
@@ -22,7 +29,7 @@ export function initTokenClient(clientId, onTokenReceived, onError) {
   }
 
   // Utiliza o Client ID da variável de ambiente ou o configurado pelo usuário
-  const activeClientId = clientId || import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const activeClientId = clientId || envClientId;
 
   if (!activeClientId || 
       activeClientId.trim() === "" || 
@@ -58,14 +65,21 @@ export function initTokenClient(clientId, onTokenReceived, onError) {
  * @returns {Promise<string>} Retorna o access token do Google.
  */
 export function loginWithGoogle(clientId) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
-      const activeClientId = clientId || import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      const activeClientId = clientId || envClientId;
+      const cachedToken = await loadGoogleToken();
+      if (cachedToken) {
+        return resolve(cachedToken);
+      }
 
       if (!tokenClient || (activeClientId && activeClientId !== initializedClientId)) {
         initTokenClient(
           activeClientId,
-          (token) => resolve(token),
+          (token) => {
+            saveGoogleToken(token);
+            resolve(token);
+          },
           (err) => reject(err)
         );
       }
@@ -74,8 +88,8 @@ export function loginWithGoogle(clientId) {
         return reject(new Error("Erro de Autenticação: Configure seu Google Client ID nas configurações."));
       }
 
-      // Requisita o token abrindo o popup nativo de consentimento
-      tokenClient.requestAccessToken({ prompt: 'consent' });
+      // Requisita o token abrindo o popup nativo sem forçar consentimento toda vez
+      tokenClient.requestAccessToken();
     } catch (err) {
       reject(err);
     }
@@ -93,7 +107,8 @@ async function findBackupFile(token) {
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`
-    }
+    },
+    signal: AbortSignal.timeout(15000)
   });
   if (!response.ok) {
     throw new Error("Erro ao consultar backups no Google Drive.");
@@ -153,7 +168,8 @@ export async function uploadBackupToDrive(termsData, token) {
   const response = await fetch(url, {
     method,
     headers,
-    body
+    body,
+    signal: AbortSignal.timeout(15000)
   });
 
   if (!response.ok) {
@@ -183,7 +199,8 @@ export async function downloadBackupFromDrive(token) {
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`
-    }
+    },
+    signal: AbortSignal.timeout(15000)
   });
 
   if (!response.ok) {

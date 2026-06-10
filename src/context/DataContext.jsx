@@ -119,8 +119,11 @@ export function DataProvider({ children }) {
         context = (match[2] || match[3] || "").trim();
       }
 
-      const slug = slugifyKey(termText);
-      if (!slug || rawTerms.indexOf(termText) !== rawTerms.findIndex(t => slugifyKey(t) === slug)) continue;
+      const slug = slugifyKey(cleanTerm);
+      if (!slug || rawTerms.indexOf(termText) !== rawTerms.findIndex(t => {
+        const m = t.match(/^([^(:\n]+)(?:\(([^)]+)\)|:([^\n]+))?$/);
+        return slugifyKey(m ? m[1].trim() : t) === slug;
+      })) continue;
 
       saveTermsData((prev) => {
         if (prev[slug]) return prev;
@@ -220,7 +223,7 @@ export function DataProvider({ children }) {
             throw new Error("Empty Response");
           }
         } catch (err) {
-          console.error("Gemini API Error", err);
+          // Silent fallback on API error to avoid key leakage
           saveTermsData((prev) => {
             return {
               ...prev,

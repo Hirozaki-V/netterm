@@ -1,22 +1,29 @@
 import { useState, useRef, useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { UIContext } from '../../context/UIContext';
+import { DataContext } from '../../context/DataContext';
 import { validateApiKey } from '../../services/aiService';
 import { loginWithGoogle, uploadBackupToDrive, downloadBackupFromDrive } from '../../services/driveService';
 import { normalizeTerms } from '../../services/storageService';
 
 function SettingsModal() {
   const {
-    terms,
-    setTerms,
     setSettingsOpen,
-    geminiApiKey,
-    setGeminiApiKey,
     showToast,
     showCustomConfirm
-  } = useContext(AppContext);
+  } = useContext(UIContext);
+
+  const {
+    terms,
+    setTerms,
+    geminiApiKey,
+    setGeminiApiKey,
+    googleClientId,
+    setGoogleClientId
+  } = useContext(DataContext);
 
   const [activeSettingsTab, setActiveSettingsTab] = useState('local'); // 'local' ou 'cloud'
   const [localKey, setLocalKey] = useState(geminiApiKey);
+  const [localGoogleClientId, setLocalGoogleClientId] = useState(googleClientId || '');
   const [isValidating, setIsValidating] = useState(false);
   
   // Google Drive state
@@ -120,24 +127,30 @@ function SettingsModal() {
     }
   };
 
-  // --- Google Drive Event Handlers ---
   const handleConnectGoogle = async () => {
+    const cleanClientId = localGoogleClientId.trim();
+    if (!cleanClientId) {
+      showToast("Por favor, preencha o seu Google Client ID.", true);
+      return;
+    }
+
+    setGoogleClientId(cleanClientId);
     setIsSyncing(true);
     try {
-      const token = await loginWithGoogle();
+      const token = await loginWithGoogle(cleanClientId);
       setGoogleToken(token);
       showToast("Conectado ao Google Drive com sucesso! 🎉");
     } catch (err) {
       console.error("OAuth Connection Error:", err);
-      const errMsg = err?.message || '';
-      if (errMsg.includes("Configure seu Google Client ID") || errMsg.includes("invalid_client")) {
-        showToast("Erro de Autenticação: Configure seu Google Client ID no arquivo .env", true);
-      } else {
-        showToast("Não foi possível conectar com o Google Drive.", true);
-      }
+      showToast(err.message || "Não foi possível conectar com o Google Drive.", true);
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const handleDisconnectGoogle = () => {
+    setGoogleToken(null);
+    showToast("Google Drive desconectado.");
   };
 
   const handleUploadBackup = async () => {
@@ -329,15 +342,53 @@ function SettingsModal() {
             <>
               {/* Cloud Sincronização Section */}
               {!googleToken ? (
-                <div className="form-group" style={{ textAlign: 'center', padding: '1.5rem 0' }}>
-                  <i className="fa-brands fa-google-drive" style={{ fontSize: '3.5rem', color: 'var(--accent-cyan)', marginBottom: '1rem', display: 'block' }} aria-hidden="true"></i>
-                  <h4 style={{ fontWeight: '500' }}>Sincronização com Google Drive</h4>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '360px', margin: '0.5rem auto 1.5rem auto', lineHeight: '1.5' }}>
-                    Conecte sua conta do Google Drive para armazenar backups automáticos e seguros de seus termos de estudo de forma 100% gratuita.
-                  </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" htmlFor="settings-google-client-id">Google Client ID (OAuth 2.0)</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      id="settings-google-client-id"
+                      placeholder="Cole seu ID do cliente (ex: 123456-abc.apps.googleusercontent.com)..."
+                      value={localGoogleClientId}
+                      onChange={(e) => setLocalGoogleClientId(e.target.value)}
+                      disabled={isSyncing}
+                    />
+                    
+                    <div className="wizard-instructions" style={{ 
+                      marginTop: '0.75rem', 
+                      padding: '0.75rem 1rem', 
+                      borderRadius: '6px', 
+                      background: 'rgba(255, 255, 255, 0.03)', 
+                      border: '1px solid var(--border-color)', 
+                      fontSize: '0.85rem', 
+                      lineHeight: '1.45' 
+                    }}>
+                      <strong style={{ color: 'var(--accent-cyan)', display: 'block', marginBottom: '0.4rem' }}>
+                        ☁️ Como criar seu Google Client ID:
+                      </strong>
+                      <ol style={{ paddingLeft: '1.2rem', margin: 0, color: 'var(--text-secondary)' }}>
+                        <li style={{ marginBottom: '0.3rem' }}>
+                          Acesse o{' '}
+                          <a 
+                            href="https://console.cloud.google.com/" 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            style={{ color: 'var(--accent-cyan)', textDecoration: 'underline', fontWeight: '600' }}
+                          >
+                            Google Cloud Console <i className="fa-solid fa-arrow-up-right-from-square" style={{ fontSize: '0.75rem' }}></i>
+                          </a>.
+                        </li>
+                        <li style={{ marginBottom: '0.3rem' }}>Configure a tela de consentimento OAuth e adicione seu e-mail como usuário de teste.</li>
+                        <li style={{ marginBottom: '0.3rem' }}>Crie uma credencial de <strong>ID do cliente OAuth</strong> para aplicativo da Web.</li>
+                        <li>Nas Origens JavaScript autorizadas, adicione: <code>http://localhost:5173</code> e <code>http://localhost:3000</code>.</li>
+                      </ol>
+                    </div>
+                  </div>
+
                   <button
                     className="btn-primary"
-                    style={{ margin: '0 auto', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    style={{ margin: '0 auto', display: 'flex', alignItems: 'center', gap: '0.5rem', width: '100%', justifyContent: 'center' }}
                     onClick={handleConnectGoogle}
                     disabled={isSyncing}
                   >
@@ -354,17 +405,35 @@ function SettingsModal() {
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: '0.75rem', 
-                    marginBottom: '1.5rem', 
+                    marginBottom: '1.25rem', 
                     padding: '0.75rem 1rem', 
                     borderRadius: '6px', 
                     background: 'rgba(16, 185, 129, 0.08)', 
                     border: '1px solid var(--accent-green)' 
                   }}>
                     <i className="fa-solid fa-circle-check" style={{ color: 'var(--accent-green)', fontSize: '1.3rem' }} aria-hidden="true"></i>
-                    <div style={{ fontSize: '0.85rem', textAlign: 'left' }}>
-                      <strong style={{ color: 'var(--accent-green)', display: 'block', marginBottom: '0.1rem' }}>Conectado com Sucesso!</strong>
-                      <span style={{ color: 'var(--text-secondary)' }}>Sua conta Google está vinculada e ativa para sincronização.</span>
+                    <div style={{ fontSize: '0.85rem', textAlign: 'left', flex: 1 }}>
+                      <strong style={{ color: 'var(--accent-green)', display: 'block', marginBottom: '0.1rem' }}>Conectado!</strong>
+                      <span style={{ color: 'var(--text-secondary)' }}>Armazenando backups na pasta oculta do app.</span>
                     </div>
+                    <button
+                      className="filter-tab"
+                      style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem', border: '1px solid rgba(236, 72, 153, 0.4)', color: 'var(--accent-pink)' }}
+                      onClick={handleDisconnectGoogle}
+                    >
+                      <i className="fa-solid fa-right-from-bracket"></i> Sair
+                    </button>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                    <label className="form-label">Client ID em uso</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={googleClientId}
+                      disabled
+                      style={{ opacity: 0.6 }}
+                    />
                   </div>
 
                   <label className="form-label">Ações de Sincronização</label>
@@ -378,7 +447,7 @@ function SettingsModal() {
                       {isSyncing ? (
                         <><i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '0.5rem' }}></i> Enviando backup...</>
                       ) : (
-                        <><i className="fa-solid fa-cloud-arrow-up" style={{ marginRight: '0.5rem' }}></i> Fazer Backup na Nuvem</>
+                        <><i className="fa-solid fa-cloud-arrow-up" style={{ marginRight: '0.5rem' }}></i> Enviar Dados para Nuvem</>
                       )}
                     </button>
 
@@ -391,13 +460,9 @@ function SettingsModal() {
                       {isSyncing ? (
                         <><i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '0.5rem' }}></i> Baixando backup...</>
                       ) : (
-                        <><i className="fa-solid fa-cloud-arrow-down" style={{ marginRight: '0.5rem' }}></i> Restaurar da Nuvem</>
+                        <><i className="fa-solid fa-cloud-arrow-down" style={{ marginRight: '0.5rem' }}></i> Mesclar Dados da Nuvem</>
                       )}
                     </button>
-                  </div>
-
-                  <div className="help-text" style={{ marginTop: '1.25rem', lineHeight: '1.4' }}>
-                    * O backup é armazenado de forma oculta na área de dados reservada para o aplicativo (`appDataFolder`) na sua conta do Google Drive, garantindo privacidade total (o app não tem permissão para visualizar seus arquivos pessoais).
                   </div>
                 </div>
               )}

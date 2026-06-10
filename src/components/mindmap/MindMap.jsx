@@ -1,7 +1,8 @@
 /* eslint-disable react-hooks/refs */
 /* eslint-disable react-hooks/immutability */
 import { useState, useEffect, useRef, useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { UIContext } from '../../context/UIContext';
+import { DataContext } from '../../context/DataContext';
 import MindMapDetailPanel from './MindMapDetailPanel';
 import { fetchAiConnections } from '../../services/aiService';
 import { slugifyKey } from '../../services/storageService';
@@ -17,14 +18,17 @@ const LEGEND_ITEMS = [
 
 function MindMap() {
   const {
-    terms,
-    setTerms,
     setActiveTab,
     setSelectedTermKey,
-    geminiApiKey,
     showToast,
     showCustomConfirm
-  } = useContext(AppContext);
+  } = useContext(UIContext);
+
+  const {
+    terms,
+    setTerms,
+    geminiApiKey
+  } = useContext(DataContext);
 
   // --- 1. React States for UI Render only ---
   const [physicsEnabled, setPhysicsEnabledState] = useState(false);

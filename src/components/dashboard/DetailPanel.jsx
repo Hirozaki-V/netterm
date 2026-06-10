@@ -1,23 +1,27 @@
 import { useState, useEffect, useContext, useRef } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { UIContext } from '../../context/UIContext';
+import { DataContext } from '../../context/DataContext';
 import { CATEGORY_COLORS, getCategoryLabel } from '../../utils/constants';
 
 function DetailPanel() {
   const {
-    terms,
-    setTerms,
     selectedTermKey,
     setSelectedTermKey,
+    setEditDefModalOpen,
+    setAddConnModalOpen,
+    showCustomPrompt,
+    showToast
+  } = useContext(UIContext);
+
+  const {
+    terms,
+    setTerms,
     updateTermNotes,
     deleteTerm,
     removeConnection,
-    setEditDefModalOpen,
-    setAddConnModalOpen,
     geminiApiKey,
-    showCustomPrompt,
-    fetchGeminiSummary,
-    showToast
-  } = useContext(AppContext);
+    fetchGeminiSummary
+  } = useContext(DataContext);
 
   const item = selectedTermKey ? terms[selectedTermKey] : null;
   const [localNotes, setLocalNotes] = useState(item ? (item.notes || '') : '');

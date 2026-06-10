@@ -1,13 +1,17 @@
 import { useState, useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { UIContext } from '../../context/UIContext';
+import { DataContext } from '../../context/DataContext';
 
 function AddConnectionModal() {
   const {
     setAddConnModalOpen,
-    selectedTermKey,
+    selectedTermKey
+  } = useContext(UIContext);
+
+  const {
     terms,
     addConnection
-  } = useContext(AppContext);
+  } = useContext(DataContext);
 
   const [eligibleTerms] = useState(() => {
     if (!selectedTermKey || !terms[selectedTermKey]) return [];

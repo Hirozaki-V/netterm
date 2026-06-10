@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { UIContext } from '../../context/UIContext';
 
 function PromptModal() {
-  const { customModal, handleModalConfirm, handleModalCancel } = useContext(AppContext);
+  const { customModal, handleModalConfirm, handleModalCancel } = useContext(UIContext);
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef(null);
 

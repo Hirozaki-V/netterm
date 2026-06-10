@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { UIContext } from '../../context/UIContext';
 
 const POMO_MODES = [
   { id: 'work', label: 'Foco (25m)' },
@@ -13,8 +13,11 @@ const getPomoTimeForMode = (mode) => {
   return 25 * 60;
 };
 
+// Singleton AudioContext pattern (Fase 2.2)
+let audioCtxSingleton = null;
+
 function Pomodoro() {
-  const { showToast, activeTab } = useContext(AppContext);
+  const { showToast, activeTab } = useContext(UIContext);
 
   const [pomoMode, setPomoMode] = useState('work');
   const [pomoTimeLeft, setPomoTimeLeft] = useState(25 * 60);
@@ -33,7 +36,13 @@ function Pomodoro() {
 
   const playPomoSound = () => {
     try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!audioCtxSingleton) {
+        audioCtxSingleton = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const audioCtx = audioCtxSingleton;
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
       const oscillator = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
       

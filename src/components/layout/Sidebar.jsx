@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { UIContext } from '../../context/UIContext';
 
 const NAV_ITEMS = [
   { id: 'dashboard', icon: 'fa-table-columns', label: 'Dashboard' },
@@ -11,7 +11,7 @@ const NAV_ITEMS = [
 ];
 
 function Sidebar() {
-  const { activeTab, setActiveTab, mobileMenuOpen, setMobileMenuOpen } = useContext(AppContext);
+  const { activeTab, setActiveTab, mobileMenuOpen, setMobileMenuOpen } = useContext(UIContext);
 
   const handleNavClick = (tabId) => {
     setActiveTab(tabId);

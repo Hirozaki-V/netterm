@@ -1,8 +1,10 @@
 import { useState, useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { UIContext } from '../../context/UIContext';
+import { DataContext } from '../../context/DataContext';
 
 function MobileDrawer() {
-  const { mobileDrawerOpen, setMobileDrawerOpen, processDumpInput } = useContext(AppContext);
+  const { mobileDrawerOpen, setMobileDrawerOpen } = useContext(UIContext);
+  const { processDumpInput } = useContext(DataContext);
   const [drawerValue, setDrawerValue] = useState('');
 
   if (!mobileDrawerOpen) {

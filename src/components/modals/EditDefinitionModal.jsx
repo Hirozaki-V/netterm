@@ -1,14 +1,18 @@
 import { useState, useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { UIContext } from '../../context/UIContext';
+import { DataContext } from '../../context/DataContext';
 
 function EditDefinitionModal() {
   const {
     setEditDefModalOpen,
     selectedTermKey,
-    terms,
-    updateTermDefinition,
     showToast
-  } = useContext(AppContext);
+  } = useContext(UIContext);
+
+  const {
+    terms,
+    updateTermDefinition
+  } = useContext(DataContext);
 
   const item = selectedTermKey ? terms[selectedTermKey] : null;
 

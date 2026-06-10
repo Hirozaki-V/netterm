@@ -1,9 +1,11 @@
 import { useState, useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { UIContext } from '../../context/UIContext';
+import { DataContext } from '../../context/DataContext';
 import { getCategoryLabel } from '../../utils/constants';
 
 function Flashcards() {
-  const { terms, showToast } = useContext(AppContext);
+  const { showToast } = useContext(UIContext);
+  const { terms } = useContext(DataContext);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 

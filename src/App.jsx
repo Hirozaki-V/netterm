@@ -1,5 +1,6 @@
 import { useContext } from 'react';
-import { AppContext } from './context/AppContext';
+import { UIContext } from './context/UIContext';
+import { DataContext } from './context/DataContext';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import Dashboard from './components/dashboard/Dashboard';
@@ -28,9 +29,10 @@ function App() {
     editDefModalOpen,
     addConnModalOpen,
     customModal,
-    isDbLoading,
     selectedTermKey
-  } = useContext(AppContext);
+  } = useContext(UIContext);
+
+  const { isDbLoading } = useContext(DataContext);
 
   const toastStyle = {
     position: 'fixed',

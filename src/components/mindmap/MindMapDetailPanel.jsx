@@ -1,9 +1,9 @@
 import { useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { DataContext } from '../../context/DataContext';
 import { getCategoryLabel, CATEGORY_COLORS } from '../../utils/constants';
 
 function MindMapDetailPanel({ selectedNodeId, onClose, onStudy }) {
-  const { terms } = useContext(AppContext);
+  const { terms } = useContext(DataContext);
   
   const item = selectedNodeId ? terms[selectedNodeId] : null;
 

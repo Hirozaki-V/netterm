@@ -7,6 +7,7 @@
  */
 
 let tokenClient = null;
+let initializedClientId = null;
 
 /**
  * Inicializa o cliente de token do Google Identity Services.
@@ -20,7 +21,7 @@ export function initTokenClient(clientId, onTokenReceived, onError) {
     throw new Error("O script do Google Identity Services não foi carregado no index.html.");
   }
 
-  // Utiliza o Client ID da variável de ambiente ou um placeholder seguro
+  // Utiliza o Client ID da variável de ambiente ou o configurado pelo usuário
   const activeClientId = clientId || import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   if (!activeClientId || 
@@ -28,7 +29,7 @@ export function initTokenClient(clientId, onTokenReceived, onError) {
       activeClientId.includes("SEU_CLIENT_ID_DO_GOOGLE") || 
       activeClientId.includes("YOUR_CLIENT_ID") ||
       activeClientId === "placeholder") {
-    const error = new Error("Erro de Autenticação: Configure seu Google Client ID no arquivo .env");
+    const error = new Error("Erro de Autenticação: Configure seu Google Client ID nas configurações.");
     if (onError) onError(error);
     throw error;
   }
@@ -46,26 +47,31 @@ export function initTokenClient(clientId, onTokenReceived, onError) {
       }
     },
   });
+
+  initializedClientId = activeClientId;
 }
 
 /**
  * Dispara o popup de login/autorização do Google OAuth2 para obter um token de acesso.
  * 
+ * @param {string} [clientId] - O Client ID do Google OAuth2 configurado.
  * @returns {Promise<string>} Retorna o access token do Google.
  */
-export function loginWithGoogle() {
+export function loginWithGoogle(clientId) {
   return new Promise((resolve, reject) => {
     try {
-      if (!tokenClient) {
+      const activeClientId = clientId || import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+      if (!tokenClient || (activeClientId && activeClientId !== initializedClientId)) {
         initTokenClient(
-          null,
+          activeClientId,
           (token) => resolve(token),
           (err) => reject(err)
         );
       }
       
       if (!tokenClient) {
-        return reject(new Error("Erro de Autenticação: Configure seu Google Client ID no arquivo .env"));
+        return reject(new Error("Erro de Autenticação: Configure seu Google Client ID nas configurações."));
       }
 
       // Requisita o token abrindo o popup nativo de consentimento

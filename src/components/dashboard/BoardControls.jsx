@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { DataContext } from '../../context/DataContext';
 
 const CATEGORY_FILTERS = [
   { id: 'all', label: 'Todos' },
@@ -12,7 +12,7 @@ const CATEGORY_FILTERS = [
 ];
 
 function BoardControls() {
-  const { filters, setFilters } = useContext(AppContext);
+  const { filters, setFilters } = useContext(DataContext);
 
   const handleCategoryChange = (catId) => {
     setFilters((prev) => ({ ...prev, category: catId }));

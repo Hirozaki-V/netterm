@@ -1,9 +1,11 @@
 import { useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { UIContext } from '../../context/UIContext';
+import { DataContext } from '../../context/DataContext';
 import { getCategoryLabel } from '../../utils/constants';
 
 function TermsGrid({ limit }) {
-  const { terms, filters, deleteTerm, setSelectedTermKey } = useContext(AppContext);
+  const { setSelectedTermKey } = useContext(UIContext);
+  const { terms, filters, deleteTerm } = useContext(DataContext);
 
   // 1. Filter terms based on search criteria and category
   const filteredKeys = Object.keys(terms).filter((key) => {

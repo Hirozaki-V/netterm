@@ -1,8 +1,10 @@
 import { useState, useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { UIContext } from '../../context/UIContext';
+import { DataContext } from '../../context/DataContext';
 
 function QuickDumpInput() {
-  const { processDumpInput, showToast } = useContext(AppContext);
+  const { showToast } = useContext(UIContext);
+  const { processDumpInput } = useContext(DataContext);
   const [inputValue, setInputValue] = useState('');
 
   const handleSubmit = () => {
@@ -24,12 +26,13 @@ function QuickDumpInput() {
 
   return (
     <div className="quick-dump-container">
-      <div className="dump-box">
+      {/* Layout Desktop: Textarea + Botão lateral/abaixo */}
+      <div className="dump-box desktop-only-dump">
         <div className="dump-input-wrapper">
           <textarea
             className="dump-textarea"
             id="dump-textarea"
-            placeholder="Insira termos aqui... (Ex: Fotossíntese, Democracia, Algoritmo, Metáfora) - Pressione Enter para adicionar!"
+            placeholder="Digite seus termos de estudo aqui (separados por vírgula)..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -39,8 +42,28 @@ function QuickDumpInput() {
           </button>
         </div>
         <div className="dump-tip">
-          <span><i className="fa-solid fa-lightbulb" aria-hidden="true"></i> Você pode jogar vários termos separados por vírgula.</span>
-          <span>Pressione <code>Shift + Enter</code> para nova linha.</span>
+          <span>Dica: Use <code>Enter</code> para processar e <code>Shift + Enter</code> para pular linha.</span>
+        </div>
+      </div>
+
+      {/* Layout Mobile: Chat input pill (Minimalista e Rápido) */}
+      <div className="mobile-only-dump">
+        <div className="chat-input-pill">
+          <i className="fa-solid fa-bolt chat-input-icon" aria-hidden="true"></i>
+          <input
+            type="text"
+            id="dump-input-mobile"
+            placeholder="Adicionar termos (separados por vírgula)..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+          />
+          <button className="send-btn" onClick={handleSubmit} aria-label="Processar termos">
+            <i className="fa-solid fa-arrow-up" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div className="dump-tip-mobile">
+          <i className="fa-solid fa-info-circle" aria-hidden="true"></i> Separe por vírgula para cadastrar vários termos de uma vez
         </div>
       </div>
     </div>
@@ -48,4 +71,3 @@ function QuickDumpInput() {
 }
 
 export default QuickDumpInput;
-

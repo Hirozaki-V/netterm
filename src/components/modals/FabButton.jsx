@@ -1,8 +1,8 @@
 import { useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { UIContext } from '../../context/UIContext';
 
 function FabButton() {
-  const { mobileDrawerOpen, setMobileDrawerOpen } = useContext(AppContext);
+  const { mobileDrawerOpen, setMobileDrawerOpen } = useContext(UIContext);
 
   return (
     <button 

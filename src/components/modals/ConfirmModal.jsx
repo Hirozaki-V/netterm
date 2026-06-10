@@ -1,8 +1,8 @@
 import { useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { UIContext } from '../../context/UIContext';
 
 function ConfirmModal() {
-  const { customModal, handleModalConfirm, handleModalCancel } = useContext(AppContext);
+  const { customModal, handleModalConfirm, handleModalCancel } = useContext(UIContext);
 
   const isOpen = customModal && customModal.type === 'confirm';
 

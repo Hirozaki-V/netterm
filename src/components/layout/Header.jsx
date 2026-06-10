@@ -1,9 +1,9 @@
 import { useContext } from 'react';
-import { AppContext } from '../../context/AppContext';
+import { UIContext } from '../../context/UIContext';
+import { DataContext } from '../../context/DataContext';
 
 function Header() {
   const {
-    geminiApiKey,
     setActiveTab,
     setSelectedTermKey,
     setSettingsOpen,
@@ -12,7 +12,9 @@ function Header() {
     setMobileDrawerOpen,
     setEditDefModalOpen,
     setAddConnModalOpen
-  } = useContext(AppContext);
+  } = useContext(UIContext);
+
+  const { geminiApiKey } = useContext(DataContext);
 
   const handleLogoClick = () => {
     setActiveTab('dashboard');

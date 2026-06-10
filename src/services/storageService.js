@@ -79,15 +79,16 @@ const createSampleTerms = () => {
 };
 
 /**
- * Carrega os termos e a chave de API salvas no IndexedDB de forma assíncrona.
+ * Carrega os termos, a chave de API e o Google Client ID salvas no IndexedDB de forma assíncrona.
  * Se o banco de dados estiver vazio, inicializa os termos padrão.
  * 
- * @returns {Promise<object>} Retorna um objeto { terms, geminiApiKey }.
+ * @returns {Promise<object>} Retorna um objeto { terms, geminiApiKey, googleClientId }.
  */
 export async function loadInitialData() {
   try {
     const savedTerms = await localforage.getItem('studyflow_terms');
     const savedKey = await localforage.getItem('studyflow_api_key');
+    const savedGoogleClientId = await localforage.getItem('studyflow_google_client_id');
       
     let terms = normalizeTerms(savedTerms);
     if (!terms || Object.keys(terms).length === 0) {
@@ -97,13 +98,15 @@ export async function loadInitialData() {
       
     return {
       terms,
-      geminiApiKey: typeof savedKey === 'string' ? savedKey : ''
+      geminiApiKey: typeof savedKey === 'string' ? savedKey : '',
+      googleClientId: typeof savedGoogleClientId === 'string' ? savedGoogleClientId : ''
     };
   } catch (error) {
     console.error("Erro ao carregar dados do IndexedDB:", error);
     return {
       terms: createSampleTerms(),
-      geminiApiKey: ''
+      geminiApiKey: '',
+      googleClientId: ''
     };
   }
 }
@@ -137,6 +140,24 @@ export async function saveApiKey(key) {
     }
   } catch (error) {
     console.error("Erro ao salvar chave de API no IndexedDB:", error);
+  }
+}
+
+/**
+ * Salva o Google Client ID no IndexedDB de forma assíncrona.
+ * 
+ * @param {string} clientId - O Client ID do Google OAuth do usuário.
+ * @returns {Promise<void>}
+ */
+export async function saveGoogleClientId(clientId) {
+  try {
+    if (clientId && clientId.trim()) {
+      await localforage.setItem('studyflow_google_client_id', clientId.trim());
+    } else {
+      await localforage.removeItem('studyflow_google_client_id');
+    }
+  } catch (error) {
+    console.error("Erro ao salvar Google Client ID no IndexedDB:", error);
   }
 }
 

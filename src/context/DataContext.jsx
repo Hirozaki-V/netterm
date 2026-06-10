@@ -1,19 +1,19 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { AppContext } from './AppContext';
+import { createContext, useState, useEffect, useCallback, useMemo, useRef, useContext } from 'react';
+import { UIContext } from './UIContext';
 import BUILTIN_DICTIONARY from '../data/dictionary';
 import { fetchGeminiSummary as fetchGeminiSummaryService } from '../services/aiService';
 import {
   loadInitialData,
   saveTerms as saveTermsService,
   saveApiKey as saveApiKeyService,
+  saveGoogleClientId as saveGoogleClientIdService,
   slugifyKey
 } from '../services/storageService';
 
+export const DataContext = createContext();
+
 const SAMPLE_TERMS_KEYS = ["fotossintese", "celula", "dna", "democracia", "algoritmo", "metafora", "inteligencia artificial", "energia"];
 
-
-
-// Declared helper outside of component to prevent recreate and satisfy dependency constraints
 const createSampleTerms = () => {
   const initialTerms = {};
   SAMPLE_TERMS_KEYS.forEach(key => {
@@ -33,30 +33,17 @@ const createSampleTerms = () => {
   return initialTerms;
 };
 
-export function AppProvider({ children }) {
+export function DataProvider({ children }) {
   const [terms, setTerms] = useState({});
   const [geminiApiKey, setGeminiApiKey] = useState('');
+  const [googleClientId, setGoogleClientId] = useState('');
   const [isDbLoading, setIsDbLoading] = useState(true);
-
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [selectedTermKey, setSelectedTermKey] = useState(null);
   const [filters, setFilters] = useState({ search: '', category: 'all' });
 
-  // --- UI Control States ---
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [editDefModalOpen, setEditDefModalOpen] = useState(false);
-  const [addConnModalOpen, setAddConnModalOpen] = useState(false);
+  const { showToast, showCustomConfirm, selectedTermKey, setSelectedTermKey } = useContext(UIContext);
 
-  // --- Toast state ---
-  const [toast, setToast] = useState(null);
-  
-  // --- Custom Modals ---
-  const [customModal, setCustomModal] = useState(null);
   const saveQueueRef = useRef(Promise.resolve());
-
-
+  const isLoadedRef = useRef(false);
 
   // --- Initial Database Loading Effect ---
   useEffect(() => {
@@ -64,15 +51,15 @@ export function AppProvider({ children }) {
       const data = await loadInitialData();
       setTerms(data.terms);
       setGeminiApiKey(data.geminiApiKey);
+      setGoogleClientId(data.googleClientId || '');
       setIsDbLoading(false);
     }
     loadData();
   }, []);
 
-  const initializeSampleTerms = useCallback(async () => {
-    const initial = createSampleTerms();
-    setTerms(initial);
-    await saveTermsService(initial);
+  const saveGoogleClientId = useCallback((clientId) => {
+    setGoogleClientId(clientId);
+    saveGoogleClientIdService(clientId);
   }, []);
 
   const persistTerms = useCallback((next) => {
@@ -81,73 +68,32 @@ export function AppProvider({ children }) {
       .then(() => saveTermsService(next));
   }, []);
 
+  // Safe and pure enfileiramento de salvamento via useEffect (1.3)
+  useEffect(() => {
+    if (!isDbLoading) {
+      if (isLoadedRef.current) {
+        persistTerms(terms);
+      } else {
+        isLoadedRef.current = true;
+      }
+    }
+  }, [terms, isDbLoading, persistTerms]);
+
+  const initializeSampleTerms = useCallback(async () => {
+    const initial = createSampleTerms();
+    setTerms(initial);
+  }, []);
+
   const saveTermsData = useCallback((updater) => {
     setTerms((prev) => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
-      persistTerms(next);
-      return next;
+      return typeof updater === 'function' ? updater(prev) : updater;
     });
-  }, [persistTerms]);
+  }, []);
 
   const saveApiKey = useCallback((key) => {
     setGeminiApiKey(key);
     saveApiKeyService(key);
   }, []);
-
-  // --- Toast Notification System ---
-  const showToast = useCallback((message, isError = false) => {
-    setToast({ message, isError });
-  }, []);
-
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => {
-        setToast(null);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
-
-  // --- Promisified Modals ---
-  const showCustomConfirm = useCallback((title, message, isDanger = false) => {
-    return new Promise((resolve) => {
-      setCustomModal({
-        type: 'confirm',
-        title,
-        message,
-        isDanger,
-        resolve
-      });
-    });
-  }, []);
-
-  const showCustomPrompt = useCallback((title, label, placeholder = '') => {
-    return new Promise((resolve) => {
-      setCustomModal({
-        type: 'prompt',
-        title,
-        label,
-        placeholder,
-        resolve
-      });
-    });
-  }, []);
-
-  const handleModalConfirm = useCallback((value) => {
-    if (customModal) {
-      customModal.resolve(value);
-      setCustomModal(null);
-    }
-  }, [customModal]);
-
-  const handleModalCancel = useCallback(() => {
-    if (customModal) {
-      customModal.resolve(customModal.type === 'confirm' ? false : null);
-      setCustomModal(null);
-    }
-  }, [customModal]);
-
-
 
   // --- API Gemini fetch utility wrapper ---
   const fetchGeminiSummary = useCallback(async (term, context = "") => {
@@ -315,15 +261,11 @@ export function AppProvider({ children }) {
   }, [geminiApiKey, fetchGeminiSummary, saveTermsData, showToast]);
 
   // --- Deletion and Term Actions ---
+  // Safe and pure deleteTerm action (1.2)
   const deleteTerm = useCallback(async (key) => {
-    let termName = "";
-    setTerms((prev) => {
-      if (prev[key]) {
-        termName = prev[key].term;
-      }
-      return prev;
-    });
-    if (!termName) return;
+    const targetTerm = terms[key];
+    if (!targetTerm) return;
+    const termName = targetTerm.term;
 
     const confirmed = await showCustomConfirm(
       <><i className="fa-solid fa-trash-can" style={{ color: 'var(--accent-pink)' }} /> Excluir Termo</>,
@@ -352,7 +294,7 @@ export function AppProvider({ children }) {
       }
       showToast("Termo removido.");
     }
-  }, [selectedTermKey, setSelectedTermKey, showCustomConfirm, saveTermsData, showToast]);
+  }, [terms, selectedTermKey, setSelectedTermKey, showCustomConfirm, saveTermsData, showToast]);
 
   const updateTermDefinition = useCallback((key, category, definition) => {
     saveTermsData((prev) => {
@@ -423,72 +365,33 @@ export function AppProvider({ children }) {
     showToast("Conexão removida.");
   }, [saveTermsData, showToast]);
 
-  const contextValue = useMemo(() => ({
-      terms,
-      setTerms: saveTermsData,
-      isDbLoading,
-      geminiApiKey,
-      setGeminiApiKey: saveApiKey,
-      activeTab,
-      setActiveTab,
-      selectedTermKey,
-      setSelectedTermKey,
-      filters,
-      setFilters,
-      
-      // UI open/closes
-      settingsOpen,
-      setSettingsOpen,
-      mobileMenuOpen,
-      setMobileMenuOpen,
-      mobileDrawerOpen,
-      setMobileDrawerOpen,
-      editDefModalOpen,
-      setEditDefModalOpen,
-      addConnModalOpen,
-      setAddConnModalOpen,
-
-      // Toast alerts
-      toast,
-      showToast,
-
-      // Promisified Custom Modals
-      customModal,
-      showCustomConfirm,
-      showCustomPrompt,
-      handleModalConfirm,
-      handleModalCancel,
-
-      // Gemini/Actions
-      fetchGeminiSummary,
-      processDumpInput,
-      deleteTerm,
-      updateTermDefinition,
-      updateTermNotes,
-      addConnection,
-      removeConnection,
-      initializeSampleTerms
+  const value = useMemo(() => ({
+    terms,
+    setTerms: saveTermsData,
+    isDbLoading,
+    geminiApiKey,
+    setGeminiApiKey: saveApiKey,
+    googleClientId,
+    setGoogleClientId: saveGoogleClientId,
+    filters,
+    setFilters,
+    fetchGeminiSummary,
+    processDumpInput,
+    deleteTerm,
+    updateTermDefinition,
+    updateTermNotes,
+    addConnection,
+    removeConnection,
+    initializeSampleTerms
   }), [
     terms,
     saveTermsData,
     isDbLoading,
     geminiApiKey,
     saveApiKey,
-    activeTab,
-    selectedTermKey,
+    googleClientId,
+    saveGoogleClientId,
     filters,
-    settingsOpen,
-    mobileMenuOpen,
-    mobileDrawerOpen,
-    editDefModalOpen,
-    addConnModalOpen,
-    toast,
-    showToast,
-    customModal,
-    showCustomConfirm,
-    showCustomPrompt,
-    handleModalConfirm,
-    handleModalCancel,
     fetchGeminiSummary,
     processDumpInput,
     deleteTerm,
@@ -500,8 +403,8 @@ export function AppProvider({ children }) {
   ]);
 
   return (
-    <AppContext.Provider value={contextValue}>
+    <DataContext.Provider value={value}>
       {children}
-    </AppContext.Provider>
+    </DataContext.Provider>
   );
 }

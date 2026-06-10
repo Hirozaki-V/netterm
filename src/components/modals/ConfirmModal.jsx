@@ -14,7 +14,8 @@ function ConfirmModal() {
     <div className="modal-overlay open" id="confirm-modal" role="dialog" aria-modal="true">
       <div className="modal">
         <div className="modal-header">
-          <h3 className="modal-title" id="confirm-modal-title" dangerouslySetInnerHTML={{ __html: customModal.title }}>
+          <h3 className="modal-title" id="confirm-modal-title">
+            {customModal.title}
           </h3>
           <i 
             className="fa-solid fa-xmark close-btn" 
@@ -23,7 +24,8 @@ function ConfirmModal() {
           ></i>
         </div>
         <div className="modal-body">
-          <p id="confirm-modal-message" style={{ lineHeight: 1.5, color: 'var(--text-secondary)' }} dangerouslySetInnerHTML={{ __html: customModal.message }}>
+          <p id="confirm-modal-message" style={{ lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+            {customModal.message}
           </p>
         </div>
         <div className="modal-footer">
@@ -42,4 +44,3 @@ function ConfirmModal() {
 }
 
 export default ConfirmModal;
-

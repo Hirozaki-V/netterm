@@ -1,21 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { AppContext } from './AppContext';
 import BUILTIN_DICTIONARY from '../data/dictionary';
-import { escapeHTML } from '../utils/security';
 import { fetchGeminiSummary as fetchGeminiSummaryService } from '../services/aiService';
 import {
   loadInitialData,
   saveTerms as saveTermsService,
-  saveApiKey as saveApiKeyService
+  saveApiKey as saveApiKeyService,
+  slugifyKey
 } from '../services/storageService';
 
 const SAMPLE_TERMS_KEYS = ["fotossintese", "celula", "dna", "democracia", "algoritmo", "metafora", "inteligencia artificial", "energia"];
 
-const getPomoTimeForMode = (mode) => {
-  if (mode === 'shortBreak') return 5 * 60;
-  if (mode === 'longBreak') return 15 * 60;
-  return 25 * 60;
-};
+
 
 // Declared helper outside of component to prevent recreate and satisfy dependency constraints
 const createSampleTerms = () => {
@@ -58,12 +54,9 @@ export function AppProvider({ children }) {
   
   // --- Custom Modals ---
   const [customModal, setCustomModal] = useState(null);
+  const saveQueueRef = useRef(Promise.resolve());
 
-  // --- Pomodoro State ---
-  const [pomoTimeLeft, setPomoTimeLeft] = useState(25 * 60);
-  const [pomoMode, setPomoMode] = useState('work');
-  const [pomoIsRunning, setPomoIsRunning] = useState(false);
-  const [pomoCycles, setPomoCycles] = useState(0);
+
 
   // --- Initial Database Loading Effect ---
   useEffect(() => {
@@ -76,24 +69,30 @@ export function AppProvider({ children }) {
     loadData();
   }, []);
 
-  const initializeSampleTerms = async () => {
+  const initializeSampleTerms = useCallback(async () => {
     const initial = createSampleTerms();
     setTerms(initial);
     await saveTermsService(initial);
-  };
+  }, []);
 
-  const saveTermsData = (updater) => {
+  const persistTerms = useCallback((next) => {
+    saveQueueRef.current = saveQueueRef.current
+      .catch(() => {})
+      .then(() => saveTermsService(next));
+  }, []);
+
+  const saveTermsData = useCallback((updater) => {
     setTerms((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
-      saveTermsService(next);
+      persistTerms(next);
       return next;
     });
-  };
+  }, [persistTerms]);
 
-  const saveApiKey = (key) => {
+  const saveApiKey = useCallback((key) => {
     setGeminiApiKey(key);
     saveApiKeyService(key);
-  };
+  }, []);
 
   // --- Toast Notification System ---
   const showToast = useCallback((message, isError = false) => {
@@ -134,73 +133,21 @@ export function AppProvider({ children }) {
     });
   }, []);
 
-  const handleModalConfirm = (value) => {
+  const handleModalConfirm = useCallback((value) => {
     if (customModal) {
       customModal.resolve(value);
       setCustomModal(null);
     }
-  };
+  }, [customModal]);
 
-  const handleModalCancel = () => {
+  const handleModalCancel = useCallback(() => {
     if (customModal) {
       customModal.resolve(customModal.type === 'confirm' ? false : null);
       setCustomModal(null);
     }
-  };
+  }, [customModal]);
 
-  // --- Pomodoro Ticker Effect ---
-  const playPomoSound = () => {
-    try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
-      gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.1);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
-      
-      oscillator.start();
-      oscillator.stop(audioCtx.currentTime + 0.6);
-    } catch (err) {
-      console.error("Could not play audio notification", err);
-    }
-  };
 
-  useEffect(() => {
-    let timer = null;
-    if (pomoIsRunning) {
-      timer = setInterval(() => {
-        setPomoTimeLeft((prev) => {
-          if (prev <= 1) {
-            setPomoIsRunning(false);
-            playPomoSound();
-            if (pomoMode === 'work') {
-              setPomoCycles((c) => c + 1);
-              showToast("Ciclo de foco concluído! Bom trabalho.");
-            } else {
-              showToast("Intervalo concluído! Hora de voltar aos estudos.");
-            }
-            return getPomoTimeForMode(pomoMode);
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [pomoIsRunning, pomoMode, showToast]);
-
-  const changePomoMode = (mode) => {
-    setPomoMode(mode);
-    setPomoIsRunning(false);
-    setPomoTimeLeft(getPomoTimeForMode(mode));
-  };
 
   // --- API Gemini fetch utility wrapper ---
   const fetchGeminiSummary = useCallback(async (term, context = "") => {
@@ -208,7 +155,7 @@ export function AppProvider({ children }) {
   }, [geminiApiKey]);
 
   // --- Add Term / Quick Dump Processing ---
-  const processDumpInput = async (rawInput) => {
+  const processDumpInput = useCallback(async (rawInput) => {
     const rawInputText = rawInput.trim();
     if (!rawInputText) return;
 
@@ -226,15 +173,8 @@ export function AppProvider({ children }) {
         context = (match[2] || match[3] || "").trim();
       }
 
-      const slug = termText.toLowerCase().replace(/[^a-z0-9á-ú\s/-]/gi, '').trim();
-      if (!slug) continue;
-
-      let exists = false;
-      setTerms((prev) => {
-        exists = !!prev[slug];
-        return prev;
-      });
-      if (exists) continue;
+      const slug = slugifyKey(termText);
+      if (!slug || rawTerms.indexOf(termText) !== rawTerms.findIndex(t => slugifyKey(t) === slug)) continue;
 
       saveTermsData((prev) => {
         if (prev[slug]) return prev;
@@ -254,7 +194,7 @@ export function AppProvider({ children }) {
         };
       });
 
-      const cleanSlug = cleanTerm.toLowerCase().replace(/[^a-z0-9á-ú\s/-]/gi, '').trim();
+      const cleanSlug = slugifyKey(cleanTerm);
       const cleanLookup = cleanSlug.replace(/-/g, ' ');
       
       const matchedKey = BUILTIN_DICTIONARY[cleanSlug]
@@ -311,7 +251,7 @@ export function AppProvider({ children }) {
               
               if (Array.isArray(aiResult.connections)) {
                 aiResult.connections.forEach(connSlug => {
-                  const cleanedConn = connSlug.toLowerCase().trim();
+                  const cleanedConn = slugifyKey(connSlug);
                   if (next[cleanedConn]) {
                     const connsA = next[slug].connections || [];
                     const connsB = next[cleanedConn].connections || [];
@@ -372,10 +312,10 @@ export function AppProvider({ children }) {
     }
 
     showToast("Termos processados!");
-  };
+  }, [geminiApiKey, fetchGeminiSummary, saveTermsData, showToast]);
 
   // --- Deletion and Term Actions ---
-  const deleteTerm = async (key) => {
+  const deleteTerm = useCallback(async (key) => {
     let termName = "";
     setTerms((prev) => {
       if (prev[key]) {
@@ -386,8 +326,8 @@ export function AppProvider({ children }) {
     if (!termName) return;
 
     const confirmed = await showCustomConfirm(
-      `<i class="fa-solid fa-trash-can" style="color: var(--accent-pink);"></i> Excluir Termo`,
-      `Excluir o termo "${escapeHTML(termName)}"?`,
+      <><i className="fa-solid fa-trash-can" style={{ color: 'var(--accent-pink)' }} /> Excluir Termo</>,
+      <>Excluir o termo "{termName}"?</>,
       true
     );
     
@@ -412,77 +352,78 @@ export function AppProvider({ children }) {
       }
       showToast("Termo removido.");
     }
-  };
+  }, [selectedTermKey, setSelectedTermKey, showCustomConfirm, saveTermsData, showToast]);
 
-  const updateTermDefinition = (key, category, definition) => {
-    if (!terms[key]) return;
-    const updated = {
-      ...terms,
-      [key]: {
-        ...terms[key],
-        category,
-        definition: definition.trim()
-      }
-    };
-    saveTermsData(updated);
-  };
+  const updateTermDefinition = useCallback((key, category, definition) => {
+    saveTermsData((prev) => {
+      if (!prev[key]) return prev;
+      return {
+        ...prev,
+        [key]: {
+          ...prev[key],
+          category,
+          definition: definition.trim()
+        }
+      };
+    });
+  }, [saveTermsData]);
 
-  const updateTermNotes = (key, notes) => {
-    if (!terms[key]) return;
-    const updated = {
-      ...terms,
-      [key]: {
-        ...terms[key],
-        notes
-      }
-    };
-    saveTermsData(updated);
-  };
+  const updateTermNotes = useCallback((key, notes) => {
+    saveTermsData((prev) => {
+      if (!prev[key]) return prev;
+      return {
+        ...prev,
+        [key]: {
+          ...prev[key],
+          notes
+        }
+      };
+    });
+  }, [saveTermsData]);
 
-  const addConnection = (sourceKey, destKey) => {
-    if (!terms[sourceKey] || !terms[destKey] || sourceKey === destKey) return;
-    const connsA = terms[sourceKey].connections || [];
-    const connsB = terms[destKey].connections || [];
+  const addConnection = useCallback((sourceKey, destKey) => {
+    saveTermsData((prev) => {
+      if (!prev[sourceKey] || !prev[destKey] || sourceKey === destKey) return prev;
+      const connsA = prev[sourceKey].connections || [];
+      const connsB = prev[destKey].connections || [];
 
-    const updated = {
-      ...terms,
-      [sourceKey]: {
-        ...terms[sourceKey],
-        connections: connsA.includes(destKey) ? connsA : [...connsA, destKey]
-      },
-      [destKey]: {
-        ...terms[destKey],
-        connections: connsB.includes(sourceKey) ? connsB : [...connsB, sourceKey]
-      }
-    };
-
-    saveTermsData(updated);
+      return {
+        ...prev,
+        [sourceKey]: {
+          ...prev[sourceKey],
+          connections: connsA.includes(destKey) ? connsA : [...connsA, destKey]
+        },
+        [destKey]: {
+          ...prev[destKey],
+          connections: connsB.includes(sourceKey) ? connsB : [...connsB, sourceKey]
+        }
+      };
+    });
     showToast("Conexão estabelecida!");
-  };
+  }, [saveTermsData, showToast]);
 
-  const removeConnection = (termA, termB) => {
-    if (!terms[termA] || !terms[termB]) return;
-    const connsA = terms[termA].connections || [];
-    const connsB = terms[termB].connections || [];
+  const removeConnection = useCallback((termA, termB) => {
+    saveTermsData((prev) => {
+      if (!prev[termA] || !prev[termB]) return prev;
+      const connsA = prev[termA].connections || [];
+      const connsB = prev[termB].connections || [];
 
-    const updated = {
-      ...terms,
-      [termA]: {
-        ...terms[termA],
-        connections: connsA.filter(c => c !== termB)
-      },
-      [termB]: {
-        ...terms[termB],
-        connections: connsB.filter(c => c !== termA)
-      }
-    };
-
-    saveTermsData(updated);
+      return {
+        ...prev,
+        [termA]: {
+          ...prev[termA],
+          connections: connsA.filter(c => c !== termB)
+        },
+        [termB]: {
+          ...prev[termB],
+          connections: connsB.filter(c => c !== termA)
+        }
+      };
+    });
     showToast("Conexão removida.");
-  };
+  }, [saveTermsData, showToast]);
 
-  return (
-    <AppContext.Provider value={{
+  const contextValue = useMemo(() => ({
       terms,
       setTerms: saveTermsData,
       isDbLoading,
@@ -518,16 +459,6 @@ export function AppProvider({ children }) {
       handleModalConfirm,
       handleModalCancel,
 
-      // Pomodoro
-      pomoTimeLeft,
-      setPomoTimeLeft,
-      pomoMode,
-      pomoIsRunning,
-      setPomoIsRunning,
-      pomoCycles,
-      setPomoCycles,
-      changePomoMode,
-
       // Gemini/Actions
       fetchGeminiSummary,
       processDumpInput,
@@ -537,7 +468,39 @@ export function AppProvider({ children }) {
       addConnection,
       removeConnection,
       initializeSampleTerms
-    }}>
+  }), [
+    terms,
+    saveTermsData,
+    isDbLoading,
+    geminiApiKey,
+    saveApiKey,
+    activeTab,
+    selectedTermKey,
+    filters,
+    settingsOpen,
+    mobileMenuOpen,
+    mobileDrawerOpen,
+    editDefModalOpen,
+    addConnModalOpen,
+    toast,
+    showToast,
+    customModal,
+    showCustomConfirm,
+    showCustomPrompt,
+    handleModalConfirm,
+    handleModalCancel,
+    fetchGeminiSummary,
+    processDumpInput,
+    deleteTerm,
+    updateTermDefinition,
+    updateTermNotes,
+    addConnection,
+    removeConnection,
+    initializeSampleTerms
+  ]);
+
+  return (
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );

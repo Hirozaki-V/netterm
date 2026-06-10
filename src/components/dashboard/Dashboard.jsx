@@ -19,7 +19,7 @@ function Dashboard() {
       {/* Terms Board Grid & Detail View Container */}
       <div className="board-content-wrapper">
         {/* Grid of Term Cards */}
-        <TermsGrid />
+        <TermsGrid limit={6} />
 
         {/* Detail Side Panel (Sliding) */}
         <DetailPanel key={selectedTermKey || 'empty'} />

@@ -21,14 +21,24 @@ export function initTokenClient(clientId, onTokenReceived, onError) {
   }
 
   // Utiliza o Client ID da variável de ambiente ou um placeholder seguro
-  const activeClientId = clientId || import.meta.env.VITE_GOOGLE_CLIENT_ID || 'SEU_CLIENT_ID_DO_GOOGLE.apps.googleusercontent.com';
+  const activeClientId = clientId || import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  if (!activeClientId || 
+      activeClientId.trim() === "" || 
+      activeClientId.includes("SEU_CLIENT_ID_DO_GOOGLE") || 
+      activeClientId.includes("YOUR_CLIENT_ID") ||
+      activeClientId === "placeholder") {
+    const error = new Error("Erro de Autenticação: Configure seu Google Client ID no arquivo .env");
+    if (onError) onError(error);
+    throw error;
+  }
 
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: activeClientId,
     scope: 'https://www.googleapis.com/auth/drive.appdata',
     callback: (response) => {
       if (response.error) {
-        if (onError) onError(response.error);
+        if (onError) onError(new Error(response.error));
         return;
       }
       if (onTokenReceived) {
@@ -53,6 +63,11 @@ export function loginWithGoogle() {
           (err) => reject(err)
         );
       }
+      
+      if (!tokenClient) {
+        return reject(new Error("Erro de Autenticação: Configure seu Google Client ID no arquivo .env"));
+      }
+
       // Requisita o token abrindo o popup nativo de consentimento
       tokenClient.requestAccessToken({ prompt: 'consent' });
     } catch (err) {

@@ -2,16 +2,19 @@ import { useContext } from 'react';
 import { AppContext } from '../../context/AppContext';
 import { getCategoryLabel } from '../../utils/constants';
 
-function TermsGrid() {
+function TermsGrid({ limit }) {
   const { terms, filters, deleteTerm, setSelectedTermKey } = useContext(AppContext);
 
   // 1. Filter terms based on search criteria and category
   const filteredKeys = Object.keys(terms).filter((key) => {
     const item = terms[key];
+    if (!item || typeof item.term !== 'string') return false;
+
+    const searchTerm = (filters.search || '').toLowerCase();
     const matchSearch =
-      item.term.toLowerCase().includes(filters.search) ||
-      (item.definition || '').toLowerCase().includes(filters.search) ||
-      (item.notes || '').toLowerCase().includes(filters.search);
+      item.term.toLowerCase().includes(searchTerm) ||
+      (item.definition || '').toLowerCase().includes(searchTerm) ||
+      (item.notes || '').toLowerCase().includes(searchTerm);
 
     const matchCategory =
       filters.category === 'all' || item.category === filters.category;
@@ -22,7 +25,10 @@ function TermsGrid() {
   // 2. Sort keys by date created descending
   filteredKeys.sort((a, b) => (terms[b].createdAt || 0) - (terms[a].createdAt || 0));
 
-  if (filteredKeys.length === 0) {
+  // 3. Apply limit if provided
+  const displayedKeys = typeof limit === 'number' ? filteredKeys.slice(0, limit) : filteredKeys;
+
+  if (displayedKeys.length === 0) {
     return (
       <div className="terms-grid-container">
         <div className="empty-state">
@@ -39,7 +45,7 @@ function TermsGrid() {
   return (
     <div className="terms-grid-container">
       <div className="terms-grid" id="terms-grid">
-        {filteredKeys.map((key) => {
+        {displayedKeys.map((key) => {
           const item = terms[key];
           const connectionsCount = item.connections ? item.connections.length : 0;
           const catLabel = getCategoryLabel(item.category);
@@ -90,4 +96,3 @@ function TermsGrid() {
 }
 
 export default TermsGrid;
-

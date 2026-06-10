@@ -3,6 +3,7 @@ import { AppContext } from '../../context/AppContext';
 
 const NAV_ITEMS = [
   { id: 'dashboard', icon: 'fa-table-columns', label: 'Dashboard' },
+  { id: 'all-terms', icon: 'fa-boxes-stacked', label: 'Todos os Termos' },
   { id: 'flashcards', icon: 'fa-clone', label: 'Flashcards' },
   { id: 'quiz', icon: 'fa-graduation-cap', label: 'Quiz de Fixação' },
   { id: 'mindmap', icon: 'fa-circle-nodes', label: 'Mapa de Conexões' },

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useContext } from 'react';
 import { AppContext } from '../../context/AppContext';
 import MindMapDetailPanel from './MindMapDetailPanel';
 import { fetchAiConnections } from '../../services/aiService';
+import { slugifyKey } from '../../services/storageService';
 
 const LEGEND_ITEMS = [
   { color: 'var(--accent-green)', label: 'Ciências' },
@@ -400,7 +401,7 @@ function MindMap() {
 
   const handleClearLinks = async () => {
     const confirmed = await showCustomConfirm(
-      `<i class="fa-solid fa-link-slash" style="color: var(--accent-pink);"></i> Limpar Conexões`,
+      <><i className="fa-solid fa-link-slash" style={{ color: 'var(--accent-pink)' }} /> Limpar Conexões</>,
       "Deseja apagar todas as conexões entre termos? Isso não apagará os termos em si.",
       true
     );
@@ -613,10 +614,12 @@ function MindMap() {
         let addedCount = 0;
         const updatedTerms = { ...terms };
 
-        connections.forEach(([keyA, keyB]) => {
+        connections.forEach(([rawKeyA, rawKeyB]) => {
+          const keyA = slugifyKey(rawKeyA);
+          const keyB = slugifyKey(rawKeyB);
           const nodeA = updatedTerms[keyA];
           const nodeB = updatedTerms[keyB];
-          if (nodeA && nodeB && keyA !== keyB) {
+          if (keyA && keyB && nodeA && nodeB && keyA !== keyB) {
             const connsA = nodeA.connections || [];
             const connsB = nodeB.connections || [];
             let changedA = false;

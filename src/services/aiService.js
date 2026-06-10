@@ -14,7 +14,7 @@ export async function validateApiKey(apiKey) {
   if (!apiKey || !apiKey.trim()) {
     throw new Error("A chave de API está em branco.");
   }
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
   const payload = {
     contents: [{
       parts: [{
@@ -31,7 +31,8 @@ export async function validateApiKey(apiKey) {
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(20000)
   });
 
   if (!response.ok) {
@@ -62,7 +63,7 @@ export async function fetchGeminiSummary(term, context = "", apiKey) {
   if (!apiKey || !apiKey.trim()) {
     throw new Error("Chave de API não configurada.");
   }
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
   
   let systemPrompt = `Você é um tutor didático multidisciplinar, especialista em diversas áreas do conhecimento.
   Crie um resumo explicativo simplificado porém cientificamente correto sobre o termo/conceito: "${term}".`;
@@ -99,7 +100,8 @@ export async function fetchGeminiSummary(term, context = "", apiKey) {
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(30000)
   });
 
   if (!response.ok) {
@@ -144,9 +146,12 @@ export async function fetchAiConnections(keys, terms, apiKey) {
   if (!apiKey || !apiKey.trim()) {
     throw new Error("Chave de API não configurada.");
   }
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
   
-  const termsList = keys.map(k => `ID: "${k}" - Termo: "${terms[k].term}"`).join("\n");
+  const termsList = keys
+    .filter(k => terms[k] && typeof terms[k].term === 'string')
+    .map(k => `ID: "${k}" - Termo: "${terms[k].term}"`)
+    .join("\n");
   
   const systemPrompt = `Você é um tutor didático especialista em criar mapas mentais de aprendizado.
   Abaixo está uma lista de termos de estudo atualmente salvos pelo estudante.
@@ -181,7 +186,8 @@ export async function fetchAiConnections(keys, terms, apiKey) {
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(30000)
   });
 
   if (!response.ok) {

@@ -1,4 +1,4 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 
 /* CSS Variables ÔÇö Preserving all logical variables required by app.js and category styling */
 :root {
@@ -77,7 +77,7 @@ button, input, textarea, select {
   background: rgba(10, 11, 18, 0.3);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.25);
   border-radius: 10px;
   transition: var(--transition-smooth);
 }
@@ -87,7 +87,7 @@ button, input, textarea, select {
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.08) var(--bg-primary);
+  scrollbar-color: rgba(255, 255, 255, 0.25) var(--bg-primary);
 }
 
 /* Focus Ring for Keyboard Accessibility */
@@ -306,6 +306,14 @@ main {
   height: 100%;
 }
 
+#tab-dashboard,
+#tab-all-terms,
+#tab-quiz,
+#tab-pomodoro {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
 .tab-content.active {
   display: flex;
 }
@@ -512,6 +520,12 @@ main {
   position: relative;
 }
 
+#tab-dashboard .board-content-wrapper,
+#tab-all-terms .board-content-wrapper {
+  flex: none;
+  overflow: visible;
+}
+
 .terms-grid-container {
   flex: 1;
   overflow-y: auto;
@@ -519,9 +533,17 @@ main {
   scroll-behavior: smooth;
 }
 
+#tab-dashboard .terms-grid-container,
+#tab-all-terms .terms-grid-container {
+  flex: none;
+  overflow: visible;
+  width: 100%;
+  max-width: 100%;
+}
+
 .terms-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: 1.25rem;
 }
 
@@ -548,7 +570,9 @@ main {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 170px;
+  min-height: 120px;
+  max-width: 900px;
+  width: 100%;
   position: relative;
   cursor: pointer;
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
@@ -651,6 +675,7 @@ main {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  max-width: 800px;
 }
 
 .card-footer {
@@ -699,6 +724,14 @@ main {
   position: relative;
   z-index: 100;
   box-shadow: -10px 0 40px rgba(0, 0, 0, 0.4);
+}
+
+#tab-dashboard .detail-panel,
+#tab-all-terms .detail-panel {
+  position: sticky;
+  top: 0;
+  height: calc(100vh - 70px);
+  align-self: flex-start;
 }
 
 .detail-panel.open {
@@ -1093,12 +1126,14 @@ main {
 /* ÔöÇÔöÇÔöÇ 3. QUIZ TAB ÔöÇÔöÇÔöÇ */
 
 .quiz-wrapper {
-  flex: 1;
+  flex: none;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 2.5rem 2rem;
+  width: 100%;
 }
 
 .quiz-card {
@@ -1239,6 +1274,138 @@ main {
   border-top: 1px solid var(--border-color);
   padding-top: 1.15rem;
   margin-top: 0.5rem;
+}
+
+/* ──── Focus Pomodoro Timer Tab ──── */
+.pomodoro-wrapper {
+  flex: none;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 2rem;
+  width: 100%;
+}
+
+.pomodoro-card {
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 2.2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+.pomodoro-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pomodoro-header h2 {
+  font-family: var(--font-title);
+  font-size: 1.8rem;
+  font-weight: 700;
+  background: var(--gradient-cyber);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+.pomodoro-header p {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  max-width: 320px;
+  margin: 0;
+}
+
+.pomodoro-icon-container {
+  font-size: 2.5rem;
+  color: var(--accent-cyan);
+  margin-bottom: 0.25rem;
+}
+
+.pomodoro-icon-glow {
+  filter: drop-shadow(0 0 8px var(--accent-cyan));
+}
+
+.pomodoro-modes {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.pomodoro-display-container {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+.pomodoro-ring {
+  width: 100%;
+  height: 100%;
+}
+
+.ring-bg {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.03);
+  stroke-width: 8px;
+}
+
+.ring-progress {
+  fill: none;
+  stroke: var(--accent-cyan);
+  stroke-width: 8px;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.3s ease;
+  filter: drop-shadow(0 0 6px var(--accent-cyan));
+}
+
+.pomodoro-time-text {
+  position: absolute;
+  font-family: var(--font-title);
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+}
+
+.pomodoro-controls {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.pomodoro-controls button {
+  flex: 1;
+  max-width: 150px;
+}
+
+.pomodoro-stats {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.pomodoro-stats strong {
+  color: var(--accent-cyan);
 }
 
 /* ÔöÇÔöÇÔöÇ 4. MAPA DE CONEX├òES (MIND MAP) TAB ÔöÇÔöÇÔöÇ */
@@ -1750,8 +1917,8 @@ main {
 
   .app-container {
     flex-direction: column;
-    height: auto;
-    min-height: calc(100vh - 70px);
+    height: calc(100vh - 70px);
+    overflow: hidden;
   }
 
   header {
@@ -1790,7 +1957,8 @@ main {
 
   main {
     width: 100%;
-    min-height: calc(100vh - 70px);
+    height: 100%;
+    min-height: 0;
   }
 
   .detail-panel {
@@ -1809,7 +1977,28 @@ main {
   }
 
   .terms-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+  }
+
+  /* Pomodoro Tab Mobile Adjustments */
+  .pomodoro-wrapper {
+    padding: 1.5rem 1rem;
+    justify-content: flex-start;
+    padding-top: 2rem;
+  }
+  
+  .pomodoro-card {
+    padding: 1.5rem 1.25rem;
+    gap: 1.25rem;
+  }
+
+  .pomodoro-display-container {
+    width: 220px;
+    height: 220px;
+  }
+
+  .pomodoro-time-text {
+    font-size: 2.5rem;
   }
 
   .flashcard-stage {
@@ -1896,13 +2085,12 @@ main {
   }
 
   .terms-grid {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 0.85rem;
   }
 
   .term-card {
     padding: 1.15rem;
-    min-height: 150px;
+    min-height: 120px;
     border-radius: 12px;
   }
 
@@ -2160,12 +2348,11 @@ main {
 
   /* Term card adjustments */
   .terms-grid {
-    grid-template-columns: 1fr;
     gap: 0.6rem;
   }
 
   .term-card {
-    min-height: 120px;
+    min-height: 110px;
     padding: 1rem;
   }
 
@@ -2183,6 +2370,20 @@ main {
 
   .card-footer {
     font-size: 0.68rem;
+  }
+
+  /* Pomodoro Mobile Adjustments */
+  .pomodoro-display-container {
+    width: 200px;
+    height: 200px;
+  }
+
+  .pomodoro-time-text {
+    font-size: 2.2rem;
+  }
+  
+  .pomodoro-header h2 {
+    font-size: 1.5rem;
   }
 
   /* Flashcards stacking buttons for extreme touch ergonomics */
@@ -2373,6 +2574,66 @@ main {
 
   .flashcard {
     transition: none !important;
+  }
+}
+
+/* ──── RESPONSIVE: Low Vertical Height Layouts (≤ 800px) ──── */
+@media (max-height: 800px) {
+  .quick-dump-container {
+    padding: 0.75rem 1.5rem;
+  }
+  .dump-box {
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+    border-radius: 12px;
+  }
+  .dump-textarea {
+    min-height: 45px;
+    font-size: 0.95rem;
+  }
+  .board-controls {
+    padding: 0.75rem 1.5rem;
+    gap: 1rem;
+  }
+  .filter-tab {
+    padding: 0.4rem 0.9rem;
+    font-size: 0.75rem;
+  }
+  .search-input {
+    padding: 0.5rem 1rem 0.5rem 2.4rem;
+    font-size: 0.85rem;
+  }
+  .terms-grid-container {
+    padding: 0 1.5rem 1.5rem 1.5rem;
+  }
+  .pomodoro-card {
+    padding: 1.5rem;
+    gap: 1rem;
+  }
+  .pomodoro-display-container {
+    width: 220px;
+    height: 220px;
+    margin: 0.5rem 0;
+  }
+  .pomodoro-time-text {
+    font-size: 2.4rem;
+  }
+  .pomodoro-header h2 {
+    font-size: 1.5rem;
+  }
+  .pomodoro-header p {
+    font-size: 0.8rem;
+  }
+  .quiz-card {
+    padding: 1.5rem;
+    gap: 1rem;
+  }
+  .quiz-question {
+    font-size: 1.1rem;
+  }
+  .quiz-option {
+    padding: 0.8rem;
+    font-size: 0.85rem;
   }
 }
 

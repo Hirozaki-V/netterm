@@ -2,6 +2,7 @@ import { useState, useRef, useContext } from 'react';
 import { AppContext } from '../../context/AppContext';
 import { validateApiKey } from '../../services/aiService';
 import { loginWithGoogle, uploadBackupToDrive, downloadBackupFromDrive } from '../../services/driveService';
+import { normalizeTerms } from '../../services/storageService';
 
 function SettingsModal() {
   const {
@@ -87,28 +88,9 @@ function SettingsModal() {
       try {
         const importedData = JSON.parse(evt.target.result);
         if (typeof importedData === 'object' && importedData !== null && !Array.isArray(importedData)) {
-          const validatedData = {};
-          let skipped = 0;
-
-          Object.keys(importedData).forEach(key => {
-            const item = importedData[key];
-            if (item && typeof item === 'object' && typeof item.term === 'string' && typeof item.definition === 'string') {
-              validatedData[key] = {
-                term: item.term,
-                definition: item.definition,
-                category: typeof item.category === 'string' ? item.category : 'custom',
-                connections: Array.isArray(item.connections) ? item.connections.filter(c => typeof c === 'string') : [],
-                notes: typeof item.notes === 'string' ? item.notes : '',
-                x: typeof item.x === 'number' ? item.x : Math.random() * 400 + 100,
-                y: typeof item.y === 'number' ? item.y : Math.random() * 250 + 80,
-                createdAt: typeof item.createdAt === 'number' ? item.createdAt : Date.now()
-              };
-            } else {
-              skipped++;
-            }
-          });
-
-          const mergedTerms = { ...terms, ...validatedData };
+          const validatedData = normalizeTerms(importedData);
+          const skipped = Object.keys(importedData).length - Object.keys(validatedData).length;
+          const mergedTerms = normalizeTerms({ ...terms, ...validatedData });
           setTerms(mergedTerms);
           
           const importedCount = Object.keys(validatedData).length;
@@ -127,7 +109,7 @@ function SettingsModal() {
 
   const handleClearDb = async () => {
     const confirmed = await showCustomConfirm(
-      `<i class="fa-solid fa-triangle-exclamation" style="color: var(--accent-pink);"></i> Limpar Banco de Dados`,
+      <><i className="fa-solid fa-triangle-exclamation" style={{ color: 'var(--accent-pink)' }} /> Limpar Banco de Dados</>,
       "ATENÇÃO: Isso apagará TODOS os seus termos cadastrados! Deseja continuar?",
       true
     );
@@ -147,7 +129,12 @@ function SettingsModal() {
       showToast("Conectado ao Google Drive com sucesso! 🎉");
     } catch (err) {
       console.error("OAuth Connection Error:", err);
-      showToast("Não foi possível conectar com o Google Drive.", true);
+      const errMsg = err?.message || '';
+      if (errMsg.includes("Configure seu Google Client ID") || errMsg.includes("invalid_client")) {
+        showToast("Erro de Autenticação: Configure seu Google Client ID no arquivo .env", true);
+      } else {
+        showToast("Não foi possível conectar com o Google Drive.", true);
+      }
     } finally {
       setIsSyncing(false);
     }
@@ -171,7 +158,7 @@ function SettingsModal() {
     if (!googleToken) return;
 
     const confirmed = await showCustomConfirm(
-      `<i class="fa-solid fa-cloud-arrow-down" style="color: var(--accent-orange);"></i> Restaurar da Nuvem`,
+      <><i className="fa-solid fa-cloud-arrow-down" style={{ color: 'var(--accent-orange)' }} /> Restaurar da Nuvem</>,
       "Deseja restaurar o backup da nuvem? Isso mesclará as informações do Google Drive com as locais.",
       false
     );
@@ -181,28 +168,9 @@ function SettingsModal() {
     try {
       const cloudData = await downloadBackupFromDrive(googleToken);
       if (cloudData && typeof cloudData === 'object') {
-        const validatedData = {};
-        let skipped = 0;
-
-        Object.keys(cloudData).forEach(key => {
-          const item = cloudData[key];
-          if (item && typeof item === 'object' && typeof item.term === 'string' && typeof item.definition === 'string') {
-            validatedData[key] = {
-              term: item.term,
-              definition: item.definition,
-              category: typeof item.category === 'string' ? item.category : 'custom',
-              connections: Array.isArray(item.connections) ? item.connections.filter(c => typeof c === 'string') : [],
-              notes: typeof item.notes === 'string' ? item.notes : '',
-              x: typeof item.x === 'number' ? item.x : Math.random() * 400 + 100,
-              y: typeof item.y === 'number' ? item.y : Math.random() * 250 + 80,
-              createdAt: typeof item.createdAt === 'number' ? item.createdAt : Date.now()
-            };
-          } else {
-            skipped++;
-          }
-        });
-
-        const mergedTerms = { ...terms, ...validatedData };
+        const validatedData = normalizeTerms(cloudData);
+        const skipped = Object.keys(cloudData).length - Object.keys(validatedData).length;
+        const mergedTerms = normalizeTerms({ ...terms, ...validatedData });
         setTerms(mergedTerms);
 
         const restoredCount = Object.keys(validatedData).length;

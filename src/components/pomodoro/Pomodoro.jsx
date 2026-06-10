@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { AppContext } from '../../context/AppContext';
 
 const POMO_MODES = [
@@ -7,17 +7,19 @@ const POMO_MODES = [
   { id: 'longBreak', label: 'Pausa Longa (15m)' },
 ];
 
+const getPomoTimeForMode = (mode) => {
+  if (mode === 'shortBreak') return 5 * 60;
+  if (mode === 'longBreak') return 15 * 60;
+  return 25 * 60;
+};
+
 function Pomodoro() {
-  const {
-    pomoTimeLeft,
-    setPomoTimeLeft,
-    pomoMode,
-    pomoIsRunning,
-    setPomoIsRunning,
-    pomoCycles,
-    changePomoMode,
-    activeTab
-  } = useContext(AppContext);
+  const { showToast, activeTab } = useContext(AppContext);
+
+  const [pomoMode, setPomoMode] = useState('work');
+  const [pomoTimeLeft, setPomoTimeLeft] = useState(25 * 60);
+  const [pomoIsRunning, setPomoIsRunning] = useState(false);
+  const [pomoCycles, setPomoCycles] = useState(0);
 
   const totalSeconds = pomoMode === 'shortBreak' ? 5 * 60 : pomoMode === 'longBreak' ? 15 * 60 : 25 * 60;
   const strokeDashoffset = 565.48 - (pomoTimeLeft / totalSeconds) * 565.48;
@@ -28,6 +30,53 @@ function Pomodoro() {
     const seconds = secs % 60;
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
+
+  const playPomoSound = () => {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+      gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.1);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+      
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.6);
+    } catch (err) {
+      console.error("Could not play audio notification", err);
+    }
+  };
+
+  useEffect(() => {
+    let timer = null;
+    if (pomoIsRunning) {
+      timer = setInterval(() => {
+        setPomoTimeLeft((prev) => {
+          if (prev <= 1) {
+            setPomoIsRunning(false);
+            playPomoSound();
+            if (pomoMode === 'work') {
+              setPomoCycles((c) => c + 1);
+              showToast("Ciclo de foco concluído! Bom trabalho.");
+            } else {
+              showToast("Intervalo concluído! Hora de voltar aos estudos.");
+            }
+            return getPomoTimeForMode(pomoMode);
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [pomoIsRunning, pomoMode, showToast]);
 
   const handleStart = () => {
     setPomoIsRunning(true);
@@ -40,6 +89,12 @@ function Pomodoro() {
   const handleReset = () => {
     setPomoIsRunning(false);
     setPomoTimeLeft(totalSeconds);
+  };
+
+  const changePomoMode = (mode) => {
+    setPomoMode(mode);
+    setPomoIsRunning(false);
+    setPomoTimeLeft(getPomoTimeForMode(mode));
   };
 
   return (
@@ -109,4 +164,3 @@ function Pomodoro() {
 }
 
 export default Pomodoro;
-

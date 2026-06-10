@@ -14,6 +14,9 @@ import ConfirmModal from './components/modals/ConfirmModal';
 import PromptModal from './components/modals/PromptModal';
 import FabButton from './components/modals/FabButton';
 import MobileDrawer from './components/modals/MobileDrawer';
+import BoardControls from './components/dashboard/BoardControls';
+import TermsGrid from './components/dashboard/TermsGrid';
+import DetailPanel from './components/dashboard/DetailPanel';
 
 function App() {
   const { 
@@ -25,7 +28,8 @@ function App() {
     editDefModalOpen,
     addConnModalOpen,
     customModal,
-    isDbLoading
+    isDbLoading,
+    selectedTermKey
   } = useContext(AppContext);
 
   const toastStyle = {
@@ -87,6 +91,17 @@ function App() {
         <main>
           {/* 1. DASHBOARD TAB */}
           <Dashboard />
+
+          {/* Nova aba: Todos os Termos */}
+          {activeTab === 'all-terms' && (
+            <section className="tab-content active" id="tab-all-terms">
+              <BoardControls />
+              <div className="board-content-wrapper">
+                <TermsGrid />
+                <DetailPanel key={selectedTermKey || 'all-empty'} />
+              </div>
+            </section>
+          )}
 
           {/* 2. FLASHCARDS TAB */}
           {activeTab === 'flashcards' && <Flashcards />}

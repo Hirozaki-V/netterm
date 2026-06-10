@@ -56,4 +56,3 @@ function BoardControls() {
 
 export default BoardControls;
 
-

@@ -12,16 +12,18 @@ function AddConnectionModal() {
   const [eligibleTerms] = useState(() => {
     if (!selectedTermKey || !terms[selectedTermKey]) return [];
     const currentItem = terms[selectedTermKey];
+    const currentConnections = currentItem.connections || [];
     return Object.keys(terms).filter(
-      (key) => key !== selectedTermKey && !currentItem.connections.includes(key)
+      (key) => key !== selectedTermKey && !currentConnections.includes(key)
     );
   });
 
   const [selectedDestKey, setSelectedDestKey] = useState(() => {
     if (!selectedTermKey || !terms[selectedTermKey]) return '';
     const currentItem = terms[selectedTermKey];
+    const currentConnections = currentItem.connections || [];
     const eligible = Object.keys(terms).filter(
-      (key) => key !== selectedTermKey && !currentItem.connections.includes(key)
+      (key) => key !== selectedTermKey && !currentConnections.includes(key)
     );
     return eligible.length > 0 ? eligible[0] : '';
   });
@@ -76,4 +78,3 @@ function AddConnectionModal() {
 }
 
 export default AddConnectionModal;
-

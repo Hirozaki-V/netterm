@@ -67,7 +67,7 @@ function Header() {
           aria-label="Abrir menu de navegação"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
-          <i className="fa-solid fa-bars" aria-hidden="true"></i>
+          <i className={`fa-solid ${mobileMenuOpen ? 'fa-xmark' : 'fa-bars'}`} aria-hidden="true"></i>
         </button>
         <button 
           className="icon-btn" 

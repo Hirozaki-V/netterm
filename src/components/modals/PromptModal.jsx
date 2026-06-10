@@ -33,7 +33,8 @@ function PromptModal() {
     <div className="modal-overlay open" id="prompt-modal" role="dialog" aria-modal="true">
       <div className="modal">
         <div className="modal-header">
-          <h3 className="modal-title" id="prompt-modal-title" dangerouslySetInnerHTML={{ __html: customModal.title }}>
+          <h3 className="modal-title" id="prompt-modal-title">
+            {customModal.title}
           </h3>
           <i 
             className="fa-solid fa-xmark close-btn" 
@@ -47,8 +48,8 @@ function PromptModal() {
               className="form-label" 
               htmlFor="prompt-modal-input" 
               id="prompt-modal-label"
-              dangerouslySetInnerHTML={{ __html: customModal.label }}
             >
+              {customModal.label}
             </label>
             <input 
               type="text" 
@@ -72,4 +73,3 @@ function PromptModal() {
 }
 
 export default PromptModal;
-

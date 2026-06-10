@@ -9,6 +9,55 @@ localforage.config({
 
 const SAMPLE_TERMS_KEYS = ["fotossintese", "celula", "dna", "democracia", "algoritmo", "metafora", "inteligencia artificial", "energia"];
 
+export const slugifyKey = (key) =>
+  String(key || '').toLowerCase().replace(/[^a-z0-9á-ú\s/-]/gi, '').trim();
+
+export function normalizeTerms(rawTerms) {
+  if (!rawTerms || typeof rawTerms !== 'object' || Array.isArray(rawTerms)) {
+    return {};
+  }
+
+  const normalized = {};
+
+  Object.entries(rawTerms).forEach(([key, item]) => {
+    if (!item || typeof item !== 'object') return;
+
+    const safeKey = slugifyKey(key);
+    if (!safeKey || typeof item.term !== 'string' || typeof item.definition !== 'string') return;
+
+    normalized[safeKey] = {
+      term: item.term,
+      definition: item.definition,
+      category: typeof item.category === 'string' ? item.category : 'custom',
+      connections: Array.isArray(item.connections)
+        ? item.connections.map(slugifyKey).filter(Boolean)
+        : [],
+      notes: typeof item.notes === 'string' ? item.notes : '',
+      x: Number.isFinite(item.x) ? item.x : Math.random() * 400 + 100,
+      y: Number.isFinite(item.y) ? item.y : Math.random() * 250 + 80,
+      createdAt: Number.isFinite(item.createdAt) ? item.createdAt : Date.now()
+    };
+  });
+
+  Object.entries(normalized).forEach(([key, item]) => {
+    item.connections = [...new Set(
+      item.connections.filter((connKey) => connKey !== key && normalized[connKey])
+    )];
+
+    item.connections.forEach((connKey) => {
+      const reciprocal = normalized[connKey].connections;
+      if (!reciprocal.includes(key)) {
+        normalized[connKey] = {
+          ...normalized[connKey],
+          connections: [...reciprocal, key]
+        };
+      }
+    });
+  });
+
+  return normalized;
+}
+
 // Função utilitária para inicializar termos de amostra (offline dictionary)
 const createSampleTerms = () => {
   const initialTerms = {};
@@ -39,16 +88,16 @@ export async function loadInitialData() {
   try {
     const savedTerms = await localforage.getItem('studyflow_terms');
     const savedKey = await localforage.getItem('studyflow_api_key');
-    
-    let terms = savedTerms;
+      
+    let terms = normalizeTerms(savedTerms);
     if (!terms || Object.keys(terms).length === 0) {
       terms = createSampleTerms();
       await localforage.setItem('studyflow_terms', terms);
     }
-    
+      
     return {
       terms,
-      geminiApiKey: savedKey || ''
+      geminiApiKey: typeof savedKey === 'string' ? savedKey : ''
     };
   } catch (error) {
     console.error("Erro ao carregar dados do IndexedDB:", error);
@@ -81,7 +130,11 @@ export async function saveTerms(terms) {
  */
 export async function saveApiKey(key) {
   try {
-    await localforage.setItem('studyflow_api_key', key);
+    if (key && key.trim()) {
+      await localforage.setItem('studyflow_api_key', key.trim());
+    } else {
+      await localforage.removeItem('studyflow_api_key');
+    }
   } catch (error) {
     console.error("Erro ao salvar chave de API no IndexedDB:", error);
   }

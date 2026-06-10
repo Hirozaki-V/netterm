@@ -1,7 +1,6 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import { AppContext } from '../../context/AppContext';
 import { CATEGORY_COLORS, getCategoryLabel } from '../../utils/constants';
-import { escapeHTML } from '../../utils/security';
 
 function DetailPanel() {
   const {
@@ -23,10 +22,17 @@ function DetailPanel() {
   const item = selectedTermKey ? terms[selectedTermKey] : null;
   const [localNotes, setLocalNotes] = useState(item ? (item.notes || '') : '');
 
+  const selectedRef = useRef(selectedTermKey);
+  useEffect(() => {
+    selectedRef.current = selectedTermKey;
+  }, [selectedTermKey]);
+
   // Support mobile back gesture handling if open
   useEffect(() => {
     if (selectedTermKey && window.innerWidth <= 1024) {
-      history.pushState({ detailOpen: true }, "");
+      if (!history.state?.detailOpen) {
+        history.pushState({ detailOpen: true }, "");
+      }
       
       const handlePopState = (e) => {
         if (!e.state || !e.state.detailOpen) {
@@ -34,7 +40,14 @@ function DetailPanel() {
         }
       };
       window.addEventListener('popstate', handlePopState);
-      return () => window.removeEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+        setTimeout(() => {
+          if (!selectedRef.current && history.state?.detailOpen) {
+            history.back();
+          }
+        }, 50);
+      };
     }
   }, [selectedTermKey, setSelectedTermKey]);
 
@@ -50,14 +63,22 @@ function DetailPanel() {
     showToast("Notas da aula salvas!");
   };
 
+  const closeDetailPanel = () => {
+    if (window.innerWidth <= 1024 && history.state?.detailOpen) {
+      history.back();
+    } else {
+      setSelectedTermKey(null);
+    }
+  };
+
   const handleRegenerateAi = async () => {
     if (!geminiApiKey || !geminiApiKey.trim()) {
       showToast("Por favor, configure uma chave da API do Gemini nas configurações.", true);
       return;
     }
     const contextPrompt = await showCustomPrompt(
-      `Dica para a IA`,
-      `Deseja fornecer algum contexto ou dica para guiar o Gemini sobre <strong>"${escapeHTML(item.term)}"</strong>?`,
+      "Dica para a IA",
+      <>Deseja fornecer algum contexto ou dica para guiar o Gemini sobre <strong>"{item.term}"</strong>?</>,
       "Deixe em branco para busca geral..."
     );
     if (contextPrompt === null) return; // User cancelled
@@ -154,7 +175,7 @@ function DetailPanel() {
           className="icon-btn" 
           id="close-detail-btn" 
           title="Fechar painel"
-          onClick={() => setSelectedTermKey(null)}
+          onClick={closeDetailPanel}
         >
           <i className="fa-solid fa-xmark" aria-hidden="true"></i>
         </button>
@@ -223,8 +244,9 @@ function DetailPanel() {
               className="connection-pill add-connection-btn"
               onClick={() => {
                 const currentItem = terms[selectedTermKey];
+                const currentConnections = currentItem.connections || [];
                 const eligible = Object.keys(terms).filter(
-                  (key) => key !== selectedTermKey && !currentItem.connections.includes(key)
+                  (key) => key !== selectedTermKey && !currentConnections.includes(key)
                 );
                 if (eligible.length > 0) {
                   setAddConnModalOpen(true);
@@ -261,4 +283,3 @@ function DetailPanel() {
 }
 
 export default DetailPanel;
-

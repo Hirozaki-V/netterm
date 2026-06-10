@@ -106,7 +106,7 @@ function Flashcards() {
             <button className="icon-btn" id="fc-prev-btn" onClick={() => changeCardIndex(-1)}>
               <i className="fa-solid fa-chevron-left" aria-hidden="true"></i>
             </button>
-            <span className="flashcard-counter" id="fc-counter">{currentIndex + 1} / {count}</span>
+            <span className="flashcard-counter" id="fc-counter">{safeIndex + 1} / {count}</span>
             <button className="icon-btn" id="fc-next-btn" onClick={() => changeCardIndex(1)}>
               <i className="fa-solid fa-chevron-right" aria-hidden="true"></i>
             </button>

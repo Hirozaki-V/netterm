@@ -87,12 +87,8 @@ function DetailPanel() {
     }
   }, [selectedTermKey, setSelectedTermKey]);
 
-  if (!item) {
-    return <div className="detail-panel" id="detail-panel"></div>;
-  }
-
-  const catStyle = CATEGORY_COLORS[item.category] || CATEGORY_COLORS["custom"];
-  const catLabel = getCategoryLabel(item.category);
+  const catStyle = item ? (CATEGORY_COLORS[item.category] || CATEGORY_COLORS["custom"]) : { color: '', bg: '' };
+  const catLabel = item ? getCategoryLabel(item.category) : '';
 
   const saveAllChanges = (nextDefinition, nextConnections) => {
     const trimmedDef = nextDefinition.trim();
@@ -254,157 +250,166 @@ function DetailPanel() {
     }
   };
 
+  const isVisible = !!item;
+  const handleClose = handleClosePanel;
+
   return (
     <>
-      <div 
-        className="detail-backdrop" 
-        id="detail-backdrop"
-        onClick={handleClosePanel}
-      ></div>
-      <div className={`detail-panel open z-50`} id="detail-panel">
-      <div className="detail-header">
-        <div className="detail-title-wrapper">
-          <h3 className="detail-title" id="detail-title">{item.term}</h3>
-          <span 
-            className="detail-category-badge" 
-            id="detail-category"
-            style={{
-              color: catStyle.color,
-              background: catStyle.bg,
-              border: `1px solid ${catStyle.color}`
-            }}
-          >
-            {catLabel}
-          </span>
-        </div>
-        <button 
-          className="icon-btn" 
-          id="close-detail-btn" 
-          title="Fechar painel"
-          onClick={handleClosePanel}
-        >
-          <i className="fa-solid fa-xmark" aria-hidden="true"></i>
-        </button>
-      </div>
-
-      <div className="detail-body">
-        <div className="detail-section">
-          <span className="section-label">Significado / Resumo</span>
-          <textarea
-            className="w-full bg-transparent border border-transparent hover:border-slate-700/50 focus:border-[var(--accent-cyan)] focus:bg-[rgba(255,255,255,0.01)] rounded-md p-2 transition-all resize-none outline-none text-[0.95rem] text-[var(--text-secondary)] leading-relaxed cursor-text"
-            id="detail-definition"
-            value={localDefinition}
-            onChange={(e) => {
-              setLocalDefinition(e.target.value);
-              setHasUnsavedChanges(true);
-            }}
-            rows={4}
-          />
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-            <button 
-              className="filter-tab" 
-              id="edit-definition-btn" 
-              style={{ borderRadius: '6px', padding: '0.3rem 0.6rem' }}
-              onClick={() => setEditDefModalOpen(true)}
-            >
-              <i className="fa-solid fa-pen-to-square" aria-hidden="true"></i> Editar Significado
-            </button>
-            <button
-              className="filter-tab"
-              id="regenerate-ai-btn"
-              style={{ borderRadius: '6px', padding: '0.3rem 0.6rem', borderColor: 'var(--accent-cyan)', color: 'var(--accent-cyan)' }}
-              onClick={handleRegenerateAi}
-            >
-              <i className="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Consultar IA do Gemini
-            </button>
-          </div>
-        </div>
-
-        <div className="detail-section">
-          <span className="section-label">Anotações da Aula</span>
-          <textarea
-            className="notes-textarea"
-            id="detail-notes-input"
-            placeholder="Escreva anotações importantes ditas pelo professor ou exemplos práticos discutidos em sala de aula..."
-            value={localNotes}
-            onChange={(e) => {
-              setLocalNotes(e.target.value);
-              setHasUnsavedChanges(true);
-            }}
-          ></textarea>
-        </div>
-
-        <div className="detail-section">
-          <span className="section-label">Termos Relacionados</span>
-          <div className="detail-connections-list" id="detail-connections-list">
-            {localConnections && localConnections.map((connKey) => {
-              const connItem = terms[connKey];
-              if (!connItem) return null;
-              return (
-                <div 
-                  key={connKey} 
-                  className="connection-pill"
-                  onClick={() => setSelectedTermKey(connKey)}
+      {isVisible && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-[40]" 
+          id="detail-backdrop"
+          onClick={handleClose}
+        ></div>
+      )}
+      <aside className={`detail-panel ${isVisible ? 'visible' : ''} z-[50] relative`} id="detail-panel">
+        {item && (
+          <>
+            <div className="detail-header">
+              <div className="detail-title-wrapper">
+                <h3 className="detail-title" id="detail-title">{item.term}</h3>
+                <span 
+                  className="detail-category-badge" 
+                  id="detail-category"
+                  style={{
+                    color: catStyle.color,
+                    background: catStyle.bg,
+                    border: `1px solid ${catStyle.color}`
+                  }}
                 >
-                  <span>{connItem.term}</span>
-                  <i 
-                    className="fa-solid fa-xmark connection-delete" 
-                    title="Romper conexão"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setLocalConnections(prev => prev.filter(c => c !== connKey));
-                      setHasUnsavedChanges(true);
-                    }}
-                  ></i>
-                </div>
-              );
-            })}
-            <div 
-              className="connection-pill add-connection-btn"
-              onClick={() => {
-                const eligible = Object.keys(terms).filter(
-                  (key) => key !== selectedTermKey && !localConnections.includes(key)
-                );
-                if (eligible.length > 0) {
-                  setAddConnectionCallback(() => (destKey) => {
-                    setLocalConnections(prev => {
-                      if (!prev.includes(destKey)) {
-                        return [...prev, destKey];
-                      }
-                      return prev;
-                    });
-                    setHasUnsavedChanges(true);
-                  });
-                  setAddConnModalOpen(true);
-                } else {
-                  showToast("Não há outros termos disponíveis para conectar.", true);
-                }
-              }}
-            >
-              <i className="fa-solid fa-plus" aria-hidden="true"></i> Conectar...
+                  {catLabel}
+                </span>
+              </div>
+              <button 
+                className="icon-btn" 
+                id="close-detail-btn" 
+                title="Fechar painel"
+                onClick={handleClose}
+              >
+                <i className="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <div className="detail-actions" style={{ display: 'flex', gap: '0.5rem', padding: '1rem 1.5rem', borderTop: '1px solid var(--border-color)', background: 'rgba(12, 14, 24, 0.4)' }}>
-        <button 
-          className="btn-secondary btn-danger" 
-          id="delete-term-btn"
-          onClick={() => deleteTerm(selectedTermKey)}
-        >
-          <i className="fa-solid fa-trash-can" aria-hidden="true"></i> Excluir Termo
-        </button>
-        <button 
-          className="btn-primary" 
-          id="save-notes-btn" 
-          style={{ flex: 1.5 }}
-          onClick={handleSaveNotes}
-        >
-          <i className="fa-solid fa-floppy-disk" aria-hidden="true"></i> Salvar Alterações
-        </button>
-      </div>
-    </div>
+            <div className="detail-body">
+              <div className="detail-section">
+                <span className="section-label">Significado / Resumo</span>
+                <textarea
+                  className="w-full bg-transparent border border-transparent hover:border-slate-700/50 focus:border-[var(--accent-cyan)] focus:bg-[rgba(255,255,255,0.01)] rounded-md p-2 transition-all resize-none outline-none text-[0.95rem] text-[var(--text-secondary)] leading-relaxed cursor-text"
+                  id="detail-definition"
+                  value={localDefinition}
+                  onChange={(e) => {
+                    setLocalDefinition(e.target.value);
+                    setHasUnsavedChanges(true);
+                  }}
+                  rows={4}
+                />
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                  <button 
+                    className="filter-tab" 
+                    id="edit-definition-btn" 
+                    style={{ borderRadius: '6px', padding: '0.3rem 0.6rem' }}
+                    onClick={() => setEditDefModalOpen(true)}
+                  >
+                    <i className="fa-solid fa-pen-to-square" aria-hidden="true"></i> Editar Significado
+                  </button>
+                  <button
+                    className="filter-tab"
+                    id="regenerate-ai-btn"
+                    style={{ borderRadius: '6px', padding: '0.3rem 0.6rem', borderColor: 'var(--accent-cyan)', color: 'var(--accent-cyan)' }}
+                    onClick={handleRegenerateAi}
+                  >
+                    <i className="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Consultar IA do Gemini
+                  </button>
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <span className="section-label">Anotações da Aula</span>
+                <textarea
+                  className="notes-textarea"
+                  id="detail-notes-input"
+                  placeholder="Escreva anotações importantes ditas pelo professor ou exemplos práticos discutidos em sala de aula..."
+                  value={localNotes}
+                  onChange={(e) => {
+                    setLocalNotes(e.target.value);
+                    setHasUnsavedChanges(true);
+                  }}
+                ></textarea>
+              </div>
+
+              <div className="detail-section">
+                <span className="section-label">Termos Relacionados</span>
+                <div className="detail-connections-list" id="detail-connections-list">
+                  {localConnections && localConnections.map((connKey) => {
+                    const connItem = terms[connKey];
+                    if (!connItem) return null;
+                    return (
+                      <div 
+                        key={connKey} 
+                        className="connection-pill"
+                        onClick={() => setSelectedTermKey(connKey)}
+                      >
+                        <span>{connItem.term}</span>
+                        <i 
+                          className="fa-solid fa-xmark connection-delete" 
+                          title="Romper conexão"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLocalConnections(prev => prev.filter(c => c !== connKey));
+                            setHasUnsavedChanges(true);
+                          }}
+                        ></i>
+                      </div>
+                    );
+                  })}
+                  <div 
+                    className="connection-pill add-connection-btn"
+                    onClick={() => {
+                      const eligible = Object.keys(terms).filter(
+                        (key) => key !== selectedTermKey && !localConnections.includes(key)
+                      );
+                      if (eligible.length > 0) {
+                        setAddConnectionCallback(() => (destKey) => {
+                          setLocalConnections(prev => {
+                            if (!prev.includes(destKey)) {
+                              return [...prev, destKey];
+                            }
+                            return prev;
+                          });
+                          setHasUnsavedChanges(true);
+                        });
+                        setAddConnModalOpen(true);
+                      } else {
+                        showToast("Não há outros termos disponíveis para conectar.", true);
+                      }
+                    }}
+                  >
+                    <i className="fa-solid fa-plus" aria-hidden="true"></i> Conectar...
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="detail-actions" style={{ display: 'flex', gap: '0.5rem', padding: '1rem 1.5rem', borderTop: '1px solid var(--border-color)', background: 'rgba(12, 14, 24, 0.4)' }}>
+              <button 
+                className="btn-secondary btn-danger" 
+                id="delete-term-btn"
+                onClick={() => deleteTerm(selectedTermKey)}
+              >
+                <i className="fa-solid fa-trash-can" aria-hidden="true"></i> Excluir Termo
+              </button>
+              <button 
+                className="btn-primary" 
+                id="save-notes-btn" 
+                style={{ flex: 1.5 }}
+                onClick={handleSaveNotes}
+              >
+                <i className="fa-solid fa-floppy-disk" aria-hidden="true"></i> Salvar Alterações
+              </button>
+            </div>
+          </>
+        )}
+      </aside>
     </>
   );
 }

@@ -105,20 +105,28 @@ function SettingsModal() {
   const handleNativeImport = async () => {
     if (Capacitor.isNativePlatform()) {
       try {
-        const result = await FilePicker.pickFiles({ types: ['application/json'], multiple: false });
-        const filePath = result.files[0]?.path;
-        if (!filePath) return;
+        const result = await FilePicker.pickFiles({ 
+          types: ['application/json'], 
+          multiple: false,
+          readData: true // <-- Crucial para ler sem problemas de permissão
+        });
         
-        const contents = await Filesystem.readFile({ path: filePath, encoding: Encoding.UTF8 });
-        const data = JSON.parse(contents.data);
-        await dbManager.importData(data);
+        const fileData = result.files[0]?.data;
+        if (!fileData) return;
+        
+        // Converte Base64 para texto preservando a acentuação UTF-8
+        const response = await fetch(`data:application/json;base64,${fileData}`);
+        const jsonText = await response.text();
+        const parsedData = JSON.parse(jsonText);
+        
+        await dbManager.importData(parsedData);
         showToast("Dados importados com sucesso!");
         setTimeout(() => window.location.reload(), 1500);
       } catch (error) {
-        showToast("Erro ao importar backup.");
+        console.error("Erro na importacao:", error);
+        showToast("Erro ao importar backup. Verifique o arquivo.");
       }
     } else {
-      // Fallback para Web
       fileInputRef.current?.click();
     }
   };

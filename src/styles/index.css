@@ -761,7 +761,8 @@ main {
   align-self: flex-start;
 }
 
-.detail-panel.open {
+.detail-panel.open,
+.detail-panel.visible {
   width: 400px;
   min-width: 400px;
 }
@@ -2154,7 +2155,8 @@ main {
     z-index: 50;
   }
 
-  .detail-panel.open {
+  .detail-panel.open,
+  .detail-panel.visible {
     width: min(440px, 85vw);
   }
 
@@ -2380,7 +2382,9 @@ main {
   }
 
   #tab-dashboard .detail-panel.open,
-  #tab-all-terms .detail-panel.open {
+  #tab-dashboard .detail-panel.visible,
+  #tab-all-terms .detail-panel.open,
+  #tab-all-terms .detail-panel.visible {
     display: flex !important;
     position: fixed !important;
     top: 0 !important;

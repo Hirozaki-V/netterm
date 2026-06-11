@@ -6,6 +6,8 @@ function QuickDumpInput() {
   const { showToast, setIsTyping } = useContext(UIContext);
   const { processDumpInput } = useContext(DataContext);
   const [inputValue, setInputValue] = useState('');
+  const input = inputValue;
+  const setInput = setInputValue;
 
   const handleSubmit = () => {
     const trimmed = inputValue.trim();
@@ -29,17 +31,15 @@ function QuickDumpInput() {
       {/* Layout Desktop: Textarea + Botão lateral/abaixo */}
       <div className="dump-box desktop-only-dump">
         <div className="dump-input-wrapper">
-          <textarea
-            className="dump-textarea text-lg p-4 focus:ring-2 focus:ring-[var(--accent-cyan)]"
-            id="dump-textarea"
-            placeholder="Digite seus termos de estudo aqui (separados por vírgula)..."
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            rows={4}
+          <textarea 
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
             onFocus={() => setIsTyping(true)}
             onBlur={() => setTimeout(() => setIsTyping(false), 250)}
-          ></textarea>
+            placeholder="Digite um termo, conceito ou anotação rápida..."
+            style={{ minHeight: '120px', padding: '1rem', fontSize: '1.1rem', borderRadius: '12px', width: '100%' }}
+            className="bg-[var(--bg-secondary)] text-[var(--text-primary)] border-2 border-[var(--border-color)] focus:border-[var(--accent-cyan)] outline-none resize-none transition-colors"
+          />
           <button className="btn-primary" id="add-term-btn" onClick={handleSubmit}>
             <i className="fa-solid fa-bolt" aria-hidden="true"></i> Processar
           </button>

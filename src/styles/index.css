@@ -1978,8 +1978,121 @@ main {
   font-family: var(--font-body) !important;
 }
 
-/* ÔöÇÔöÇÔöÇ RESPONSIVE: Tablets (Ôëñ 1024px) ÔöÇÔöÇÔöÇ */
+/* Desktop default: hide FAB button & detail backdrop */
+.fab-btn,
+.detail-backdrop {
+  display: none;
+}
+
+/* ─── RESPONSIVE: Tablets (≤ 1024px) ─── */
 @media (max-width: 1024px) {
+  /* Mobile Detail Backdrop Styling */
+  .detail-backdrop {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(3, 4, 7, 0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 150;
+    cursor: pointer;
+  }
+
+  /* Mobile FAB Button Styling */
+  .fab-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--gradient-cyber);
+    color: var(--bg-primary);
+    border: none;
+    outline: none;
+    box-shadow: 0 4px 20px rgba(0, 242, 254, 0.4);
+    z-index: 90;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .fab-btn:active {
+    transform: scale(0.95);
+  }
+
+  .fab-btn i {
+    font-weight: 900;
+    font-size: 1.25rem;
+    color: var(--bg-primary);
+  }
+
+  /* Bottom sheet drawer overlay */
+  .drawer-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(3, 4, 7, 0.75);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: none;
+    z-index: 210;
+    align-items: flex-end;
+  }
+
+  .drawer-overlay.open {
+    display: flex;
+  }
+
+  .drawer {
+    width: 100%;
+    background: rgba(15, 18, 32, 0.95);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px 20px 0 0;
+    padding: 1.5rem;
+    transform: translateY(100%);
+    transition: transform 0.3s ease-out;
+  }
+
+  .drawer-overlay.open .drawer {
+    transform: translateY(0);
+  }
+
+  .drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+  }
+
+  .drawer-title {
+    font-family: var(--font-title);
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .drawer-body {
+    margin-bottom: 1.5rem;
+  }
+
+  .drawer-footer {
+    display: flex;
+    gap: 1rem;
+  }
+
   .mobile-menu-btn {
     display: flex;
   }

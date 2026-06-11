@@ -10,6 +10,8 @@ export function UIProvider({ children }) {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [editDefModalOpen, setEditDefModalOpen] = useState(false);
   const [addConnModalOpen, setAddConnModalOpen] = useState(false);
+  const [activeConnections, setActiveConnections] = useState(null);
+  const [addConnectionCallback, setAddConnectionCallback] = useState(null);
   
   // Toast state
   const [toast, setToast] = useState(null);
@@ -32,13 +34,20 @@ export function UIProvider({ children }) {
   }, [toast]);
 
   // Promisified Modals
-  const showCustomConfirm = useCallback((title, message, isDanger = false) => {
+  const showCustomConfirm = useCallback((title, message, options = {}) => {
+    const isDanger = typeof options === 'boolean' ? options : !!options.isDanger;
+    const confirmText = typeof options === 'object' ? options.confirmText : undefined;
+    const cancelText = typeof options === 'object' ? options.cancelText : undefined;
+    const thirdButtonText = typeof options === 'object' ? options.thirdButtonText : undefined;
     return new Promise((resolve) => {
       setCustomModal({
         type: 'confirm',
         title,
         message,
         isDanger,
+        confirmText,
+        cancelText,
+        thirdButtonText,
         resolve
       });
     });
@@ -85,6 +94,10 @@ export function UIProvider({ children }) {
     setEditDefModalOpen,
     addConnModalOpen,
     setAddConnModalOpen,
+    activeConnections,
+    setActiveConnections,
+    addConnectionCallback,
+    setAddConnectionCallback,
     toast,
     showToast,
     customModal,
@@ -100,6 +113,8 @@ export function UIProvider({ children }) {
     mobileDrawerOpen,
     editDefModalOpen,
     addConnModalOpen,
+    activeConnections,
+    addConnectionCallback,
     toast,
     showToast,
     customModal,

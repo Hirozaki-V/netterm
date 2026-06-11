@@ -29,13 +29,25 @@ function ConfirmModal() {
           </p>
         </div>
         <div className="modal-footer">
-          <button className="btn-secondary" id="confirm-cancel-btn" onClick={handleModalCancel}>Cancelar</button>
+          <button className="btn-secondary" id="confirm-cancel-btn" onClick={handleModalCancel}>
+            {customModal.cancelText || "Cancelar"}
+          </button>
+          {customModal.thirdButtonText && (
+            <button 
+              className="btn-secondary" 
+              id="confirm-third-btn" 
+              style={{ marginRight: 'auto' }}
+              onClick={() => handleModalConfirm('discard')}
+            >
+              {customModal.thirdButtonText}
+            </button>
+          )}
           <button 
             className={`btn-primary${customModal.isDanger ? ' btn-danger' : ''}`} 
             id="confirm-confirm-btn"
             onClick={() => handleModalConfirm(true)}
           >
-            Confirmar
+            {customModal.confirmText || "Confirmar"}
           </button>
         </div>
       </div>

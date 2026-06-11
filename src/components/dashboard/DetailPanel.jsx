@@ -10,13 +10,17 @@ function DetailPanel() {
     setEditDefModalOpen,
     setAddConnModalOpen,
     showCustomPrompt,
-    showToast
+    showToast,
+    showCustomConfirm,
+    setActiveConnections,
+    setAddConnectionCallback
   } = useContext(UIContext);
 
   const {
     terms,
     setTerms,
     updateTermNotes,
+    updateTermDefinition,
     deleteTerm,
     removeConnection,
     geminiApiKey,
@@ -24,7 +28,32 @@ function DetailPanel() {
   } = useContext(DataContext);
 
   const item = selectedTermKey ? terms[selectedTermKey] : null;
+  const [localDefinition, setLocalDefinition] = useState(item ? (item.definition || '') : '');
   const [localNotes, setLocalNotes] = useState(item ? (item.notes || '') : '');
+  const [localConnections, setLocalConnections] = useState(item ? (item.connections || []) : []);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  useEffect(() => {
+    if (item) {
+      setLocalDefinition(item.definition || '');
+      setLocalNotes(item.notes || '');
+      setLocalConnections(item.connections || []);
+      setHasUnsavedChanges(false);
+    }
+  }, [item?.definition, item?.notes, JSON.stringify(item?.connections)]);
+
+  useEffect(() => {
+    setActiveConnections(localConnections);
+    return () => {
+      setActiveConnections(null);
+      setAddConnectionCallback(null);
+    };
+  }, [localConnections, setActiveConnections, setAddConnectionCallback]);
+
+  const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
+  useEffect(() => {
+    hasUnsavedChangesRef.current = hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
 
   const selectedRef = useRef(selectedTermKey);
   useEffect(() => {
@@ -40,7 +69,12 @@ function DetailPanel() {
       
       const handlePopState = (e) => {
         if (!e.state || !e.state.detailOpen) {
-          setSelectedTermKey(null);
+          if (hasUnsavedChangesRef.current) {
+            history.pushState({ detailOpen: true }, "");
+            handleClosePanel();
+          } else {
+            setSelectedTermKey(null);
+          }
         }
       };
       window.addEventListener('popstate', handlePopState);
@@ -62,9 +96,48 @@ function DetailPanel() {
   const catStyle = CATEGORY_COLORS[item.category] || CATEGORY_COLORS["custom"];
   const catLabel = getCategoryLabel(item.category);
 
+  const saveAllChanges = (nextDefinition, nextConnections) => {
+    const trimmedDef = nextDefinition.trim();
+    setTerms((prev) => {
+      if (!prev[selectedTermKey]) return prev;
+      const next = { ...prev };
+      const oldConnections = prev[selectedTermKey].connections || [];
+      
+      oldConnections.forEach(connKey => {
+        if (!nextConnections.includes(connKey) && next[connKey]) {
+          next[connKey] = {
+            ...next[connKey],
+            connections: (next[connKey].connections || []).filter(c => c !== selectedTermKey)
+          };
+        }
+      });
+      
+      nextConnections.forEach(connKey => {
+        if (!oldConnections.includes(connKey) && next[connKey]) {
+          const conns = next[connKey].connections || [];
+          if (!conns.includes(selectedTermKey)) {
+            next[connKey] = {
+              ...next[connKey],
+              connections: [...conns, selectedTermKey]
+            };
+          }
+        }
+      });
+      
+      next[selectedTermKey] = {
+        ...next[selectedTermKey],
+        definition: trimmedDef,
+        connections: nextConnections
+      };
+      return next;
+    });
+    showToast("Alterações salvas com sucesso!");
+    setHasUnsavedChanges(false);
+  };
+
   const handleSaveNotes = () => {
     updateTermNotes(selectedTermKey, localNotes);
-    showToast("Notas da aula salvas!");
+    saveAllChanges(localDefinition, localConnections);
   };
 
   const closeDetailPanel = () => {
@@ -74,6 +147,31 @@ function DetailPanel() {
       setSelectedTermKey(null);
     }
   };
+
+  async function handleClosePanel() {
+    if (hasUnsavedChangesRef.current) {
+      const result = await showCustomConfirm(
+        "Alterações não salvas",
+        "Você tem alterações não salvas. Deseja salvar antes de sair?",
+        {
+          confirmText: "Salvar",
+          thirdButtonText: "Sair sem salvar",
+          cancelText: "Cancelar"
+        }
+      );
+
+      if (result === true) {
+        updateTermNotes(selectedTermKey, localNotes);
+        saveAllChanges(localDefinition, localConnections);
+        closeDetailPanel();
+      } else if (result === 'discard') {
+        setHasUnsavedChanges(false);
+        closeDetailPanel();
+      }
+    } else {
+      closeDetailPanel();
+    }
+  }
 
   const handleRegenerateAi = async () => {
     if (!geminiApiKey || !geminiApiKey.trim()) {
@@ -159,7 +257,13 @@ function DetailPanel() {
   };
 
   return (
-    <div className={`detail-panel open`} id="detail-panel">
+    <>
+      <div 
+        className="detail-backdrop" 
+        id="detail-backdrop"
+        onClick={handleClosePanel}
+      ></div>
+      <div className={`detail-panel open`} id="detail-panel">
       <div className="detail-header">
         <div className="detail-title-wrapper">
           <h3 className="detail-title" id="detail-title">{item.term}</h3>
@@ -179,7 +283,7 @@ function DetailPanel() {
           className="icon-btn" 
           id="close-detail-btn" 
           title="Fechar painel"
-          onClick={closeDetailPanel}
+          onClick={handleClosePanel}
         >
           <i className="fa-solid fa-xmark" aria-hidden="true"></i>
         </button>
@@ -188,7 +292,16 @@ function DetailPanel() {
       <div className="detail-body">
         <div className="detail-section">
           <span className="section-label">Significado / Resumo</span>
-          <p className="detail-definition" id="detail-definition">{item.definition}</p>
+          <textarea
+            className="w-full bg-transparent border border-transparent hover:border-slate-700/50 focus:border-[var(--accent-cyan)] focus:bg-[rgba(255,255,255,0.01)] rounded-md p-2 transition-all resize-none outline-none text-[0.95rem] text-[var(--text-secondary)] leading-relaxed cursor-text"
+            id="detail-definition"
+            value={localDefinition}
+            onChange={(e) => {
+              setLocalDefinition(e.target.value);
+              setHasUnsavedChanges(true);
+            }}
+            rows={4}
+          />
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
             <button 
               className="filter-tab" 
@@ -216,14 +329,17 @@ function DetailPanel() {
             id="detail-notes-input"
             placeholder="Escreva anotações importantes ditas pelo professor ou exemplos práticos discutidos em sala de aula..."
             value={localNotes}
-            onChange={(e) => setLocalNotes(e.target.value)}
+            onChange={(e) => {
+              setLocalNotes(e.target.value);
+              setHasUnsavedChanges(true);
+            }}
           ></textarea>
         </div>
 
         <div className="detail-section">
           <span className="section-label">Termos Relacionados</span>
           <div className="detail-connections-list" id="detail-connections-list">
-            {item.connections && item.connections.map((connKey) => {
+            {localConnections && localConnections.map((connKey) => {
               const connItem = terms[connKey];
               if (!connItem) return null;
               return (
@@ -238,7 +354,8 @@ function DetailPanel() {
                     title="Romper conexão"
                     onClick={(e) => {
                       e.stopPropagation();
-                      removeConnection(selectedTermKey, connKey);
+                      setLocalConnections(prev => prev.filter(c => c !== connKey));
+                      setHasUnsavedChanges(true);
                     }}
                   ></i>
                 </div>
@@ -247,12 +364,19 @@ function DetailPanel() {
             <div 
               className="connection-pill add-connection-btn"
               onClick={() => {
-                const currentItem = terms[selectedTermKey];
-                const currentConnections = currentItem.connections || [];
                 const eligible = Object.keys(terms).filter(
-                  (key) => key !== selectedTermKey && !currentConnections.includes(key)
+                  (key) => key !== selectedTermKey && !localConnections.includes(key)
                 );
                 if (eligible.length > 0) {
+                  setAddConnectionCallback(() => (destKey) => {
+                    setLocalConnections(prev => {
+                      if (!prev.includes(destKey)) {
+                        return [...prev, destKey];
+                      }
+                      return prev;
+                    });
+                    setHasUnsavedChanges(true);
+                  });
                   setAddConnModalOpen(true);
                 } else {
                   showToast("Não há outros termos disponíveis para conectar.", true);
@@ -283,6 +407,7 @@ function DetailPanel() {
         </button>
       </div>
     </div>
+    </>
   );
 }
 

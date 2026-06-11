@@ -4,4 +4,5 @@
     <string name="title_activity_main">StudyFlow</string>
     <string name="package_name">com.hirozaki.studyflow</string>
     <string name="custom_url_scheme">com.hirozaki.studyflow</string>
+    <string name="server_client_id">596584640623-0q8dn9bog45c8lb72s674j1m8ll3crb0.apps.googleusercontent.com</string>
 </resources>

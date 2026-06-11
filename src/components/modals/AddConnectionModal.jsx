@@ -5,7 +5,10 @@ import { DataContext } from '../../context/DataContext';
 function AddConnectionModal() {
   const {
     setAddConnModalOpen,
-    selectedTermKey
+    selectedTermKey,
+    addConnectionCallback,
+    setAddConnectionCallback,
+    activeConnections
   } = useContext(UIContext);
 
   const {
@@ -16,7 +19,7 @@ function AddConnectionModal() {
   const [eligibleTerms] = useState(() => {
     if (!selectedTermKey || !terms[selectedTermKey]) return [];
     const currentItem = terms[selectedTermKey];
-    const currentConnections = currentItem.connections || [];
+    const currentConnections = activeConnections || currentItem.connections || [];
     return Object.keys(terms).filter(
       (key) => key !== selectedTermKey && !currentConnections.includes(key)
     );
@@ -25,7 +28,7 @@ function AddConnectionModal() {
   const [selectedDestKey, setSelectedDestKey] = useState(() => {
     if (!selectedTermKey || !terms[selectedTermKey]) return '';
     const currentItem = terms[selectedTermKey];
-    const currentConnections = currentItem.connections || [];
+    const currentConnections = activeConnections || currentItem.connections || [];
     const eligible = Object.keys(terms).filter(
       (key) => key !== selectedTermKey && !currentConnections.includes(key)
     );
@@ -38,7 +41,12 @@ function AddConnectionModal() {
 
   const handleSave = () => {
     if (!selectedDestKey) return;
-    addConnection(selectedTermKey, selectedDestKey);
+    if (addConnectionCallback) {
+      addConnectionCallback(selectedDestKey);
+      setAddConnectionCallback(null);
+    } else {
+      addConnection(selectedTermKey, selectedDestKey);
+    }
     setAddConnModalOpen(false);
   };
 

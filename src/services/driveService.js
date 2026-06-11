@@ -1,173 +1,47 @@
-/* global google */
+import { GoogleAuth } from '@capacitor-community/google-sign-in';
 
 /**
- * Serviço de integração com o Google Drive (BYOC) para backup e sincronização.
- * Utiliza o Google Identity Services (OAuth2) nativo e a API REST v3 do Google Drive.
- * Grava dados no escopo isolado appDataFolder para segurança e privacidade do usuário.
- */
-
-import { loadGoogleToken, saveGoogleToken } from './storageService';
-
-let tokenClient = null;
-let initializedClientId = null;
-
-let envClientId = "";
-try {
-  envClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-} catch (e) {}
-
-/**
- * Inicializa o cliente de token do Google Identity Services.
+ * Sincroniza os termos atuais com o Google Drive usando o plugin nativo do Capacitor.
  * 
- * @param {string} [clientId] - O Client ID do Google OAuth2.
- * @param {function} onTokenReceived - Callback executado quando o token de acesso é gerado.
- * @param {function} onError - Callback executado em caso de erro na autorização.
- */
-export function initTokenClient(clientId, onTokenReceived, onError) {
-  if (typeof google === 'undefined') {
-    throw new Error("O script do Google Identity Services não foi carregado no index.html.");
-  }
-
-  // Utiliza o Client ID da variável de ambiente ou o configurado pelo usuário
-  const activeClientId = clientId || envClientId;
-
-  if (!activeClientId || 
-      activeClientId.trim() === "" || 
-      activeClientId.includes("SEU_CLIENT_ID_DO_GOOGLE") || 
-      activeClientId.includes("YOUR_CLIENT_ID") ||
-      activeClientId === "placeholder") {
-    const error = new Error("Erro de Autenticação: Configure seu Google Client ID nas configurações.");
-    if (onError) onError(error);
-    throw error;
-  }
-
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: activeClientId,
-    scope: 'https://www.googleapis.com/auth/drive.appdata',
-    callback: (response) => {
-      if (response.error) {
-        if (onError) onError(new Error(response.error));
-        return;
-      }
-      if (onTokenReceived) {
-        onTokenReceived(response.access_token);
-      }
-    },
-  });
-
-  initializedClientId = activeClientId;
-}
-
-/**
- * Dispara o popup de login/autorização do Google OAuth2 para obter um token de acesso.
- * 
- * @param {string} [clientId] - O Client ID do Google OAuth2 configurado.
- * @returns {Promise<string>} Retorna o access token do Google.
- */
-export function loginWithGoogle(clientId) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const activeClientId = clientId || envClientId;
-      const cachedToken = await loadGoogleToken();
-      if (cachedToken) {
-        return resolve(cachedToken);
-      }
-
-      if (!tokenClient || (activeClientId && activeClientId !== initializedClientId)) {
-        initTokenClient(
-          activeClientId,
-          (token) => {
-            saveGoogleToken(token);
-            resolve(token);
-          },
-          (err) => reject(err)
-        );
-      }
-      
-      if (!tokenClient) {
-        return reject(new Error("Erro de Autenticação: Configure seu Google Client ID nas configurações."));
-      }
-
-      // Requisita o token abrindo o popup nativo sem forçar consentimento toda vez
-      tokenClient.requestAccessToken();
-    } catch (err) {
-      reject(err);
-    }
-  });
-}
-
-/**
- * Localiza o arquivo de backup 'studyflow_backup.json' na pasta oculta appDataFolder do Google Drive.
- * 
- * @param {string} token - Token de acesso OAuth2 válido.
- * @returns {Promise<object|null>} Retorna metadados do arquivo { id, name } ou null.
- */
-async function findBackupFile(token) {
-  const url = `https://www.googleapis.com/drive/v3/files?q=name='studyflow_backup.json'+and+'appDataFolder'+in+parents&spaces=appDataFolder&fields=files(id,name)`;
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    },
-    signal: AbortSignal.timeout(15000)
-  });
-  if (!response.ok) {
-    throw new Error("Erro ao consultar backups no Google Drive.");
-  }
-  const data = await response.json();
-  return data.files && data.files.length > 0 ? data.files[0] : null;
-}
-
-/**
- * Envia o backup dos termos para o Google Drive.
- * Se o arquivo já existir, atualiza seu conteúdo (PATCH). Caso contrário, cria um novo (POST Multipart).
- * 
- * @param {object} termsData - O dicionário de termos do IndexedDB.
- * @param {string} token - Token de acesso OAuth2.
+ * @param {object} termsData - Dicionário de termos do IndexedDB.
  * @returns {Promise<object>} Retorna os metadados do arquivo salvo.
  */
-export async function uploadBackupToDrive(termsData, token) {
-  if (!token) throw new Error("Token de acesso inválido ou expirado.");
+export async function syncToDrive(termsData) {
+  // a) Inicializa o plugin de autenticação nativa do Google
+  await GoogleAuth.initialize();
 
-  const existingFile = await findBackupFile(token);
-  const fileContent = JSON.stringify(termsData, null, 2);
-  const boundary = 'studyflow_upload_boundary';
+  // b) Abre a janela nativa de contas do Android e executa o login/autorização
+  const user = await GoogleAuth.signIn();
 
-  let url;
-  let method;
-  let headers = {
-    Authorization: `Bearer ${token}`
-  };
-  let body;
-
-  if (existingFile) {
-    // Atualiza o conteúdo do arquivo existente (PATCH)
-    url = `https://www.googleapis.com/upload/drive/v3/files/${existingFile.id}?uploadType=media`;
-    method = 'PATCH';
-    headers['Content-Type'] = 'application/json';
-    body = fileContent;
-  } else {
-    // Cria um novo arquivo usando o padrão multipart (POST)
-    url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-    method = 'POST';
-    headers['Content-Type'] = `multipart/related; boundary=${boundary}`;
-
-    const metadata = {
-      name: 'studyflow_backup.json',
-      parents: ['appDataFolder']
-    };
-
-    body = `--${boundary}\r\n` +
-           `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
-           `${JSON.stringify(metadata)}\r\n` +
-           `--${boundary}\r\n` +
-           `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
-           `${fileContent}\r\n` +
-           `--${boundary}--`;
+  // c) Obtém o token de acesso da autenticação nativa
+  const accessToken = user.authentication.accessToken;
+  if (!accessToken) {
+    throw new Error("Não foi possível obter o token de acesso da autenticação nativa.");
   }
 
-  const response = await fetch(url, {
-    method,
-    headers,
+  // d) e e) Monta o corpo multipart/related necessário para o upload do Drive
+  const boundary = 'studyflow_backup_boundary';
+  const metadata = {
+    name: 'studyflow_backup.json',
+    parents: ['appDataFolder']
+  };
+  const fileContent = JSON.stringify(termsData, null, 2);
+
+  const body = `--${boundary}\r\n` +
+               `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
+               `${JSON.stringify(metadata)}\r\n` +
+               `--${boundary}\r\n` +
+               `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
+               `${fileContent}\r\n` +
+               `--${boundary}--`;
+
+  // f) Faz o upload usando fetch para a API REST do Google Drive (upload multipart)
+  const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': `multipart/related; boundary=${boundary}`
+    },
     body,
     signal: AbortSignal.timeout(15000)
   });
@@ -176,35 +50,6 @@ export async function uploadBackupToDrive(termsData, token) {
     const errorText = await response.text();
     console.error("Google Drive Upload Error Details:", errorText);
     throw new Error("Falha ao salvar dados no Google Drive.");
-  }
-
-  return await response.json();
-}
-
-/**
- * Baixa o conteúdo do backup 'studyflow_backup.json' do Google Drive.
- * 
- * @param {string} token - Token de acesso OAuth2.
- * @returns {Promise<object|null>} Retorna o JSON dos termos restaurados ou null se não houver backup.
- */
-export async function downloadBackupFromDrive(token) {
-  if (!token) throw new Error("Token de acesso inválido ou expirado.");
-
-  const existingFile = await findBackupFile(token);
-  if (!existingFile) {
-    return null; // Nenhum backup encontrado no Drive
-  }
-
-  const url = `https://www.googleapis.com/drive/v3/files/${existingFile.id}?alt=media`;
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`
-    },
-    signal: AbortSignal.timeout(15000)
-  });
-
-  if (!response.ok) {
-    throw new Error("Falha ao ler dados do backup no Google Drive.");
   }
 
   return await response.json();

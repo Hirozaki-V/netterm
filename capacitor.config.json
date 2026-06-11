@@ -1,5 +1,14 @@
 {
   "appId": "com.hirozaki.studyflow",
   "appName": "StudyFlow",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "GoogleAuth": {
+      "scopes": [
+        "https://www.googleapis.com/auth/drive.appdata"
+      ],
+      "serverClientId": "596584640623-0q8dn9bog45c8lb72s674j1m8ll3crb0.apps.googleusercontent.com",
+      "forceCodeForRefreshToken": true
+    }
+  }
 }

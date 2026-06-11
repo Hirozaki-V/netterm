@@ -7,7 +7,6 @@ import {
   loadInitialData,
   saveTerms as saveTermsService,
   saveApiKey as saveApiKeyService,
-  saveGoogleClientId as saveGoogleClientIdService,
   slugifyKey
 } from '../services/storageService';
 
@@ -37,7 +36,6 @@ const createSampleTerms = () => {
 export function DataProvider({ children }) {
   const [terms, setTerms] = useState({});
   const [geminiApiKey, setGeminiApiKey] = useState('');
-  const [googleClientId, setGoogleClientId] = useState('');
   const [isDbLoading, setIsDbLoading] = useState(true);
   const [filters, setFilters] = useState({ search: '', category: 'all' });
 
@@ -52,16 +50,12 @@ export function DataProvider({ children }) {
       const data = await loadInitialData();
       setTerms(data.terms);
       setGeminiApiKey(data.geminiApiKey);
-      setGoogleClientId(data.googleClientId || '');
       setIsDbLoading(false);
     }
     loadData();
   }, []);
 
-  const saveGoogleClientId = useCallback((clientId) => {
-    setGoogleClientId(clientId);
-    saveGoogleClientIdService(clientId);
-  }, []);
+
 
   const persistTerms = useCallback((next) => {
     saveQueueRef.current = saveQueueRef.current
@@ -375,8 +369,6 @@ export function DataProvider({ children }) {
     isDbLoading,
     geminiApiKey,
     setGeminiApiKey: saveApiKey,
-    googleClientId,
-    setGoogleClientId: saveGoogleClientId,
     filters,
     setFilters,
     fetchGeminiSummary,
@@ -393,8 +385,6 @@ export function DataProvider({ children }) {
     isDbLoading,
     geminiApiKey,
     saveApiKey,
-    googleClientId,
-    saveGoogleClientId,
     filters,
     fetchGeminiSummary,
     processDumpInput,

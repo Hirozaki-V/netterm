@@ -57,35 +57,39 @@ function SettingsModal() {
   };
 
   const handleExport = async () => {
+    const dbManager = {
+      exportData: async () => terms
+    };
     try {
+      const data = await dbManager.exportData();
+      const jsonData = JSON.stringify(data, null, 2);
+      
       if (Capacitor.isNativePlatform()) {
-        const jsonString = JSON.stringify(terms, null, 2);
-        const savedFileResult = await Filesystem.writeFile({
+        const result = await Filesystem.writeFile({
           path: 'studyflow_backup.json',
-          data: jsonString,
+          data: jsonData,
           directory: Directory.Cache,
           encoding: Encoding.UTF8
         });
         await Share.share({
-          url: savedFileResult.uri,
+          url: result.uri,
           title: 'Backup StudyFlow'
         });
-        showToast("Backup exportado com sucesso!");
       } else {
-        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(terms, null, 2));
-        const downloadAnchor = document.createElement('a');
-        downloadAnchor.setAttribute("href", dataStr);
-        downloadAnchor.setAttribute("download", `studyflow_backup_${new Date().toISOString().slice(0,10)}.json`);
-        document.body.appendChild(downloadAnchor);
-        downloadAnchor.click();
-        downloadAnchor.remove();
-        showToast("Backup exportado com sucesso!");
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `studyflow_backup_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
       }
-    } catch (err) {
-      console.error("Export error:", err);
-      showToast("Erro ao exportar banco de dados.", true);
+      showToast("Dados exportados!");
+    } catch (error) {
+      showToast("Erro ao exportar dados.");
     }
   };
+  const exportData = handleExport;
 
   const handleImportClick = () => {
     if (fileInputRef.current) {

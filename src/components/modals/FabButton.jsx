@@ -1,7 +1,7 @@
 import { useContext } from 'react';
 import { UIContext } from '../../context/UIContext';
 
-function FabButton() {
+function FabButton({ onClick }) {
   const { mobileDrawerOpen, setMobileDrawerOpen } = useContext(UIContext);
 
   return (
@@ -10,7 +10,7 @@ function FabButton() {
       id="fab-add-term-btn" 
       title="Adicionar Termos" 
       aria-label="Adicionar termos para estudo"
-      onClick={() => setMobileDrawerOpen(!mobileDrawerOpen)}
+      onClick={onClick || (() => setMobileDrawerOpen(!mobileDrawerOpen))}
     >
       <i className="fa-solid fa-plus" aria-hidden="true"></i>
     </button>

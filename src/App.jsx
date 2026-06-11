@@ -134,7 +134,7 @@ function App() {
       {customModal && customModal.type === 'prompt' && <PromptModal />}
 
       {/* Mobile FAB & Drawer */}
-      {(currentView === 'dashboard' || currentView === 'all-terms') && <FabButton />}
+      {currentView === 'dashboard' && <FabButton onClick={() => setShowQuickDump(true)} />}
       <MobileDrawer />
 
       {/* Toast Notification Alert */}

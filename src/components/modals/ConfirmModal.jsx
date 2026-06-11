@@ -7,11 +7,11 @@ function ConfirmModal() {
   const isOpen = customModal && customModal.type === 'confirm';
 
   if (!isOpen) {
-    return <div className="modal-overlay z-[70]" id="confirm-modal" role="dialog" aria-modal="true"></div>;
+    return <div className="modal-overlay z-[100]" id="confirm-modal" role="dialog" aria-modal="true"></div>;
   }
 
   return (
-    <div className="modal-overlay open z-[70]" id="confirm-modal" role="dialog" aria-modal="true">
+    <div className="modal-overlay open z-[100]" id="confirm-modal" role="dialog" aria-modal="true">
       <div className="modal">
         <div className="modal-header">
           <h3 className="modal-title" id="confirm-modal-title">

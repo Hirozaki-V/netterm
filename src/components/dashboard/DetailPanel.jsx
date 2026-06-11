@@ -261,7 +261,7 @@ function DetailPanel() {
         id="detail-backdrop"
         onClick={handleClosePanel}
       ></div>
-      <div className={`detail-panel open`} id="detail-panel">
+      <div className={`detail-panel open z-50`} id="detail-panel">
       <div className="detail-header">
         <div className="detail-title-wrapper">
           <h3 className="detail-title" id="detail-title">{item.term}</h3>

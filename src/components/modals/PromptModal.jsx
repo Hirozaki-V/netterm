@@ -30,7 +30,7 @@ function PromptModal() {
   };
 
   return (
-    <div className="modal-overlay open z-[70]" id="prompt-modal" role="dialog" aria-modal="true">
+    <div className="modal-overlay open z-[100]" id="prompt-modal" role="dialog" aria-modal="true">
       <div className="modal">
         <div className="modal-header">
           <h3 className="modal-title" id="prompt-modal-title">

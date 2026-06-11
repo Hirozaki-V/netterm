@@ -2151,7 +2151,7 @@ main {
     height: 100vh;
     background: var(--bg-secondary);
     box-shadow: -5px 0 35px rgba(0, 0, 0, 0.7);
-    z-index: 160;
+    z-index: 50;
   }
 
   .detail-panel.open {
@@ -2391,7 +2391,7 @@ main {
     max-width: 100% !important;
     min-width: 0 !important;
     height: 100% !important;
-    z-index: 1200 !important;
+    z-index: 50 !important;
     background: var(--bg-primary) !important;
     flex-direction: column !important;
     box-sizing: border-box !important;

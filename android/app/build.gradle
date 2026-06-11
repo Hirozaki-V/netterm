@@ -1,14 +1,22 @@
 apply plugin: 'com.android.application'
 
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
 android {
     namespace = "com.hirozaki.studyflow"
     compileSdk = rootProject.ext.compileSdkVersion
     signingConfigs {
         release {
             storeFile file("../../studyflow-release.keystore")
-            storePassword "Sertao@123"
+            storePassword System.getenv("RELEASE_STORE_PASSWORD") ?: localProperties.getProperty("release.storePassword") ?: ""
             keyAlias "studyflow"
-            keyPassword "Sertao@123"
+            keyPassword System.getenv("RELEASE_KEY_PASSWORD") ?: localProperties.getProperty("release.keyPassword") ?: ""
         }
     }
     defaultConfig {

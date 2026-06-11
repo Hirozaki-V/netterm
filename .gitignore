@@ -27,6 +27,7 @@ dist-ssr
 # Credentials and environment variables
 .env
 .env.*
+local.properties
 
 # Keystores and signing keys
 *.keystore

@@ -1,4 +1,4 @@
-import { GoogleAuth } from '@capacitor-community/google-sign-in';
+import { GoogleSignIn } from '@capawesome/capacitor-google-sign-in';
 
 /**
  * Sincroniza os termos atuais com o Google Drive usando o plugin nativo do Capacitor.
@@ -8,13 +8,16 @@ import { GoogleAuth } from '@capacitor-community/google-sign-in';
  */
 export async function syncToDrive(termsData) {
   // a) Inicializa o plugin de autenticação nativa do Google
-  await GoogleAuth.initialize();
+  await GoogleSignIn.initialize({
+    clientId: '596584640623-0q8dn9bog45c8lb72s674j1m8ll3crb0.apps.googleusercontent.com',
+    scopes: ['https://www.googleapis.com/auth/drive.appdata']
+  });
 
   // b) Abre a janela nativa de contas do Android e executa o login/autorização
-  const user = await GoogleAuth.signIn();
+  const result = await GoogleSignIn.signIn();
 
   // c) Obtém o token de acesso da autenticação nativa
-  const accessToken = user.authentication.accessToken;
+  const accessToken = result.accessToken;
   if (!accessToken) {
     throw new Error("Não foi possível obter o token de acesso da autenticação nativa.");
   }

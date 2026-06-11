@@ -16,7 +16,6 @@ function Header({ onHomeClick }) {
   const { geminiApiKey } = useContext(DataContext);
 
   const handleLogoClick = () => {
-    if (onHomeClick) onHomeClick();
     setMobileMenuOpen(true);
     setSelectedTermKey(null);
     setSettingsOpen(false);

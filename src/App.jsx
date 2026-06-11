@@ -30,11 +30,14 @@ function App() {
     editDefModalOpen,
     addConnModalOpen,
     customModal,
-    selectedTermKey
+    selectedTermKey,
+    setMobileDrawerOpen,
+    isTyping
   } = useContext(UIContext);
 
   const currentView = activeTab;
   const setCurrentView = setActiveTab;
+  const setShowQuickDump = setMobileDrawerOpen;
 
   const { isDbLoading } = useContext(DataContext);
 
@@ -134,7 +137,7 @@ function App() {
       {customModal && customModal.type === 'prompt' && <PromptModal />}
 
       {/* Mobile FAB & Drawer */}
-      {currentView === 'dashboard' && <FabButton onClick={() => setShowQuickDump(true)} />}
+      {currentView === 'dashboard' && !isTyping && <FabButton onClick={() => setShowQuickDump(true)} />}
       <MobileDrawer />
 
       {/* Toast Notification Alert */}

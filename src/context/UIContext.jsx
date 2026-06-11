@@ -13,6 +13,7 @@ export function UIProvider({ children }) {
   const [addConnModalOpen, setAddConnModalOpen] = useState(false);
   const [activeConnections, setActiveConnections] = useState(null);
   const [addConnectionCallback, setAddConnectionCallback] = useState(null);
+  const [isTyping, setIsTyping] = useState(false);
   
   // Toast state
   const [toast, setToast] = useState(null);
@@ -105,7 +106,9 @@ export function UIProvider({ children }) {
     showCustomConfirm,
     showCustomPrompt,
     handleModalConfirm,
-    handleModalCancel
+    handleModalCancel,
+    isTyping,
+    setIsTyping
   }), [
     activeTab,
     selectedTermKey,
@@ -122,7 +125,9 @@ export function UIProvider({ children }) {
     showCustomConfirm,
     showCustomPrompt,
     handleModalConfirm,
-    handleModalCancel
+    handleModalCancel,
+    isTyping,
+    setIsTyping
   ]);
 
   return (

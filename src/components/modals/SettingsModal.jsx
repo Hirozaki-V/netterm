@@ -7,6 +7,7 @@ import { normalizeTerms } from '../../services/storageService';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
+import { FilePicker } from '@capawesome/capacitor-file-picker';
 
 function SettingsModal() {
   const {
@@ -56,10 +57,20 @@ function SettingsModal() {
     }
   };
 
+  const dbManager = {
+    exportData: async () => terms,
+    importData: async (data) => {
+      if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+        const validatedData = normalizeTerms(data);
+        const mergedTerms = normalizeTerms({ ...terms, ...validatedData });
+        setTerms(mergedTerms);
+      } else {
+        throw new Error("Formato inválido.");
+      }
+    }
+  };
+
   const handleExport = async () => {
-    const dbManager = {
-      exportData: async () => terms
-    };
     try {
       const data = await dbManager.exportData();
       const jsonData = JSON.stringify(data, null, 2);
@@ -90,6 +101,27 @@ function SettingsModal() {
     }
   };
   const exportData = handleExport;
+
+  const handleNativeImport = async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const result = await FilePicker.pickFiles({ types: ['application/json'], multiple: false });
+        const filePath = result.files[0]?.path;
+        if (!filePath) return;
+        
+        const contents = await Filesystem.readFile({ path: filePath, encoding: Encoding.UTF8 });
+        const data = JSON.parse(contents.data);
+        await dbManager.importData(data);
+        showToast("Dados importados com sucesso!");
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (error) {
+        showToast("Erro ao importar backup.");
+      }
+    } else {
+      // Fallback para Web
+      fileInputRef.current?.click();
+    }
+  };
 
   const handleImportClick = () => {
     if (fileInputRef.current) {
@@ -259,7 +291,7 @@ function SettingsModal() {
                     className="filter-tab" 
                     id="import-db-btn" 
                     style={{ flex: 1, padding: '0.6rem', borderRadius: '6px' }}
-                    onClick={handleImportClick}
+                    onClick={handleNativeImport}
                     disabled={isValidating}
                   >
                     <i className="fa-solid fa-file-import" aria-hidden="true"></i> Importar JSON

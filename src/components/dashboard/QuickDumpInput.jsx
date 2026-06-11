@@ -3,7 +3,7 @@ import { UIContext } from '../../context/UIContext';
 import { DataContext } from '../../context/DataContext';
 
 function QuickDumpInput() {
-  const { showToast } = useContext(UIContext);
+  const { showToast, setIsTyping } = useContext(UIContext);
   const { processDumpInput } = useContext(DataContext);
   const [inputValue, setInputValue] = useState('');
 
@@ -30,12 +30,15 @@ function QuickDumpInput() {
       <div className="dump-box desktop-only-dump">
         <div className="dump-input-wrapper">
           <textarea
-            className="dump-textarea"
+            className="dump-textarea text-lg p-4 focus:ring-2 focus:ring-[var(--accent-cyan)]"
             id="dump-textarea"
             placeholder="Digite seus termos de estudo aqui (separados por vírgula)..."
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
+            rows={4}
+            onFocus={() => setIsTyping(true)}
+            onBlur={() => setTimeout(() => setIsTyping(false), 250)}
           ></textarea>
           <button className="btn-primary" id="add-term-btn" onClick={handleSubmit}>
             <i className="fa-solid fa-bolt" aria-hidden="true"></i> Processar
@@ -57,6 +60,8 @@ function QuickDumpInput() {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
+            onFocus={() => setIsTyping(true)}
+            onBlur={() => setTimeout(() => setIsTyping(false), 250)}
           />
           <button className="send-btn" onClick={handleSubmit} aria-label="Processar termos">
             <i className="fa-solid fa-arrow-up" aria-hidden="true"></i>

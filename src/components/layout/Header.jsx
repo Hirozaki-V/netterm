@@ -2,7 +2,7 @@ import { useContext } from 'react';
 import { UIContext } from '../../context/UIContext';
 import { DataContext } from '../../context/DataContext';
 
-function Header() {
+function Header({ onHomeClick }) {
   const {
     setSelectedTermKey,
     setSettingsOpen,
@@ -16,6 +16,7 @@ function Header() {
   const { geminiApiKey } = useContext(DataContext);
 
   const handleLogoClick = () => {
+    if (onHomeClick) onHomeClick();
     setMobileMenuOpen(true);
     setSelectedTermKey(null);
     setSettingsOpen(false);
@@ -45,7 +46,15 @@ function Header() {
         <div className="logo-icon">
           <i className="fa-solid fa-book-open" aria-hidden="true"></i>
         </div>
-        <span className="logo-text">StudyFlow</span>
+        <span 
+          className="logo-text cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onHomeClick) onHomeClick();
+          }}
+        >
+          StudyFlow
+        </span>
       </div>
 
       <div className="status-badge" id="api-status-badge">

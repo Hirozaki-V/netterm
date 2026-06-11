@@ -12,6 +12,8 @@
   "dependencies": {
     "@capacitor/android": "^8.4.0",
     "@capacitor/core": "^8.4.0",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/share": "^8.0.1",
     "@capawesome/capacitor-google-sign-in": "^0.1.2",
     "localforage": "^1.10.0",
     "react": "^19.2.6",

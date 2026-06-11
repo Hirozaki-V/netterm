@@ -25,12 +25,16 @@ function App() {
     mobileMenuOpen, 
     setMobileMenuOpen,
     activeTab,
+    setActiveTab,
     settingsOpen,
     editDefModalOpen,
     addConnModalOpen,
     customModal,
     selectedTermKey
   } = useContext(UIContext);
+
+  const currentView = activeTab;
+  const setCurrentView = setActiveTab;
 
   const { isDbLoading } = useContext(DataContext);
 
@@ -78,7 +82,7 @@ function App() {
   return (
     <>
       {/* Header */}
-      <Header />
+      <Header onHomeClick={() => setCurrentView('dashboard')} />
 
       {/* Application Body */}
       <div className="app-container">
@@ -130,7 +134,7 @@ function App() {
       {customModal && customModal.type === 'prompt' && <PromptModal />}
 
       {/* Mobile FAB & Drawer */}
-      <FabButton />
+      {(currentView === 'dashboard' || currentView === 'all-terms') && <FabButton />}
       <MobileDrawer />
 
       {/* Toast Notification Alert */}

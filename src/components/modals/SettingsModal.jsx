@@ -4,6 +4,9 @@ import { DataContext } from '../../context/DataContext';
 import { validateApiKey } from '../../services/aiService';
 import { syncToDrive } from '../../services/driveService';
 import { normalizeTerms } from '../../services/storageService';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
 
 function SettingsModal() {
   const {
@@ -53,17 +56,33 @@ function SettingsModal() {
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     try {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(terms, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `studyflow_backup_${new Date().toISOString().slice(0,10)}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-      showToast("Backup exportado com sucesso!");
-    } catch {
+      if (Capacitor.isNativePlatform()) {
+        const jsonString = JSON.stringify(terms, null, 2);
+        const savedFileResult = await Filesystem.writeFile({
+          path: 'studyflow_backup.json',
+          data: jsonString,
+          directory: Directory.Cache,
+          encoding: Encoding.UTF8
+        });
+        await Share.share({
+          url: savedFileResult.uri,
+          title: 'Backup StudyFlow'
+        });
+        showToast("Backup exportado com sucesso!");
+      } else {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(terms, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `studyflow_backup_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+        showToast("Backup exportado com sucesso!");
+      }
+    } catch (err) {
+      console.error("Export error:", err);
       showToast("Erro ao exportar banco de dados.", true);
     }
   };

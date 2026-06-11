@@ -3,6 +3,7 @@ import { UIContext } from '../../context/UIContext';
 import { DataContext } from '../../context/DataContext';
 import { getCategoryLabel } from '../../utils/constants';
 import ReactMarkdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
 
 function Quiz() {
   const { showToast } = useContext(UIContext);
@@ -316,7 +317,7 @@ function Quiz() {
 
               <div className="quiz-question-container" style={{ marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.02)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                 <div className="quiz-question" id="quiz-question-text" style={{ fontSize: '1.05rem', lineHeight: '1.5' }}>
-                  <ReactMarkdown>{questions[currentIndex].questionText}</ReactMarkdown>
+                  <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{questions[currentIndex].questionText}</ReactMarkdown>
                 </div>
               </div>
 
@@ -357,7 +358,7 @@ function Quiz() {
                     >
                       <span className="option-bullet" style={{ marginRight: '0.75rem' }}>{bulletContent}</span>
                       <span style={{ flex: 1 }}>
-                        <ReactMarkdown components={{ p: 'span' }}>{opt.text}</ReactMarkdown>
+                        <ReactMarkdown components={{ p: 'span' }} rehypePlugins={[rehypeSanitize]}>{opt.text}</ReactMarkdown>
                       </span>
                     </button>
                   );
@@ -426,7 +427,7 @@ function Quiz() {
                       </div>
 
                       <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
-                        <ReactMarkdown>{hist.questionText}</ReactMarkdown>
+                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{hist.questionText}</ReactMarkdown>
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.82rem', paddingLeft: '1.25rem', borderLeft: '2px solid var(--border-color)' }}>

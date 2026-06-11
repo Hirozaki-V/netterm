@@ -16,7 +16,8 @@
     "localforage": "^1.10.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-markdown": "^10.1.0"
+    "react-markdown": "^10.1.0",
+    "rehype-sanitize": "^6.0.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.4.0",

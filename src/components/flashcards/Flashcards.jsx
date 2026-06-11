@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect, useRef } from 'react';
 import { UIContext } from '../../context/UIContext';
 import { DataContext } from '../../context/DataContext';
 import { getCategoryLabel } from '../../utils/constants';
@@ -10,6 +10,16 @@ function Flashcards() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
 
+  const flipTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (flipTimeoutRef.current) {
+        clearTimeout(flipTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const cardKeys = Object.keys(terms);
   const count = cardKeys.length;
 
@@ -18,8 +28,12 @@ function Flashcards() {
     const currentSafe = currentIndex >= count ? Math.max(0, count - 1) : currentIndex;
     if (isFlipped) {
       setIsFlipped(false);
-      setTimeout(() => {
+      if (flipTimeoutRef.current) {
+        clearTimeout(flipTimeoutRef.current);
+      }
+      flipTimeoutRef.current = setTimeout(() => {
         setCurrentIndex((currentSafe + offset + count) % count);
+        flipTimeoutRef.current = null;
       }, 200);
     } else {
       setCurrentIndex((currentSafe + offset + count) % count);

@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useState, useEffect, useCallback, useMemo, useRef, useContext } from 'react';
 import { UIContext } from './UIContext';
 import { escapeHTML } from '../utils/security';
@@ -217,7 +218,7 @@ export function DataProvider({ children }) {
           } else {
             throw new Error("Empty Response");
           }
-        } catch (err) {
+        } catch {
           // Silent fallback on API error to avoid key leakage
           saveTermsData((prev) => {
             return {

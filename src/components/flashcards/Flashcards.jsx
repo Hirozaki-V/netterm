@@ -2,7 +2,6 @@ import { useState, useContext, useEffect, useRef } from 'react';
 import { UIContext } from '../../context/UIContext';
 import { DataContext } from '../../context/DataContext';
 import { getCategoryLabel } from '../../utils/constants';
-import { escapeHTML } from '../../utils/security';
 
 function Flashcards() {
   const { showToast } = useContext(UIContext);

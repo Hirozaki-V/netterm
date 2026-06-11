@@ -20,9 +20,7 @@ function DetailPanel() {
     terms,
     setTerms,
     updateTermNotes,
-    updateTermDefinition,
     deleteTerm,
-    removeConnection,
     geminiApiKey,
     fetchGeminiSummary
   } = useContext(DataContext);

@@ -4,7 +4,6 @@ import { DataContext } from '../../context/DataContext';
 
 function Header() {
   const {
-    setActiveTab,
     setSelectedTermKey,
     setSettingsOpen,
     setMobileMenuOpen,

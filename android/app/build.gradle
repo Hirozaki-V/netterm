@@ -3,6 +3,14 @@ apply plugin: 'com.android.application'
 android {
     namespace = "com.hirozaki.studyflow"
     compileSdk = rootProject.ext.compileSdkVersion
+    signingConfigs {
+        release {
+            storeFile file("../../studyflow-release.keystore")
+            storePassword "Sertao@123"
+            keyAlias "studyflow"
+            keyPassword "Sertao@123"
+        }
+    }
     defaultConfig {
         applicationId "com.hirozaki.studyflow"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -18,7 +26,8 @@ android {
     }
     buildTypes {
         release {
-            minifyEnabled false
+            signingConfig signingConfigs.release
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }

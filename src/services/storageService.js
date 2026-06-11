@@ -182,7 +182,7 @@ export async function loadGoogleToken() {
     await localforage.removeItem('studyflow_google_token');
     await localforage.removeItem('studyflow_google_token_time');
     return null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
